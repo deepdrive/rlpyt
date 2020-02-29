@@ -1,4 +1,4 @@
-
+import json
 import sys
 
 from rlpyt.utils.launching.affinity import affinity_from_code
@@ -20,6 +20,8 @@ def build_and_train(slot_affinity_code, log_dir, run_ID, config_key):
     variant = load_variant(log_dir)
     config = update_config(config, variant)
     config["eval_env"]["game"] = config["env"]["game"]
+    config["runner"]["n_steps"] = 20e3
+    config["runner"]["log_interval_steps"] = 1e3
 
     sampler = AsyncAlternatingSampler(
         EnvCls=AtariEnv,
@@ -39,6 +41,8 @@ def build_and_train(slot_affinity_code, log_dir, run_ID, config_key):
         affinity=affinity,
         **config["runner"]
     )
+
+    print(f'my config:\n{json.dumps(config, indent=2)}')
     name = "async_alt_" + config["env"]["game"]
     with logger_context(log_dir, run_ID, name, config):
         runner.train()
