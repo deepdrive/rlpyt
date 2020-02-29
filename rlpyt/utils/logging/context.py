@@ -11,8 +11,8 @@ LOG_DIR = osp.abspath(osp.join(osp.dirname(__file__), '../../../data'))
 
 
 def get_log_dir(experiment_name):
-    yyyymmdd = datetime.datetime.today().strftime("%Y%m%d")
-    log_dir = osp.join(LOG_DIR, "local", yyyymmdd, experiment_name)
+    date_str = datetime.datetime.now().strftime('%Y_%m-%d_%H-%M.%S')
+    log_dir = osp.join(LOG_DIR, "local", date_str, experiment_name)
     return log_dir
 
 
@@ -21,10 +21,10 @@ def logger_context(log_dir, run_ID, name, log_params=None, snapshot_mode="none")
     """Use as context manager around calls to the runner's ``train()`` method.
     Sets up the logger directory and filenames.  This function automatically
     prepends ``log_dir`` with the rlpyt logging directory and the date:
-    `path-to-rlpyt/data/yyyymmdd` (`data/` is in the gitignore), and appends
-    with `/run_{run_ID}` to separate multiple runs of the same settings.
-    Saves hyperparameters provided in ``log_params`` to `params.json`, along
-    with experiment `name` and `run_ID`.
+    `path-to-rlpyt/data/yyyy_mm_dd_hh_min.sec` (`data/` is in the gitignore),
+    and appends with `/run_{run_ID}` to separate multiple runs of the same
+    settings. Saves hyperparameters provided in ``log_params`` to `params.json`,
+    along with experiment `name` and `run_ID`.
 
     Input ``snapshot_mode`` refers to how often the logger actually saves the
     snapshot (e.g. may include agent parameters).  The runner calls on the
@@ -46,7 +46,7 @@ def logger_context(log_dir, run_ID, name, log_params=None, snapshot_mode="none")
     exp_dir = osp.abspath(log_dir)
     if LOG_DIR != osp.commonpath([exp_dir, LOG_DIR]):
         print(f"logger_context received log_dir outside of {LOG_DIR}: "
-            f"prepending by {LOG_DIR}/local/<yyyymmdd>/")
+            f"prepending by {LOG_DIR}/local/<yyyy_mm_dd_hh_min.sec>/")
         exp_dir = get_log_dir(log_dir)
     tabular_log_file = osp.join(exp_dir, "progress.csv")
     text_log_file = osp.join(exp_dir, "debug.log")
