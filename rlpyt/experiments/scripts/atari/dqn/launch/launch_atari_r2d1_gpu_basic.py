@@ -7,7 +7,7 @@ script = "rlpyt/experiments/scripts/atari/dqn/train/atari_r2d1_gpu.py"
 affinity_code = encode_affinity(
     n_cpu_core=4,
     n_gpu=1,
-    hyperthread_offset=8,
+    hyperthread_offset=None,
     n_socket=1,
     # cpu_per_run=2,
 )

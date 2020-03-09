@@ -20,7 +20,7 @@ def build_and_train(slot_affinity_code, log_dir, run_ID, config_key):
     variant = load_variant(log_dir)
     config = update_config(config, variant)
     config["eval_env"]["game"] = config["env"]["game"]
-    config["runner"]["n_steps"] = 20e3
+    config["runner"]["n_steps"] = 20e6  # 20e3
     config["runner"]["log_interval_steps"] = 1e3
 
     sampler = AsyncAlternatingSampler(

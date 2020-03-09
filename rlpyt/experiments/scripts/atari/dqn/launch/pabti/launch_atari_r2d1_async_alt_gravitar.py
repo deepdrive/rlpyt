@@ -6,7 +6,7 @@ from rlpyt.utils.launching.variant import make_variants, VariantLevel
 script = "rlpyt/experiments/scripts/atari/dqn/train/atari_r2d1_async_alt.py"
 affinity_code = encode_affinity(
     n_cpu_core=4,
-    n_gpu=2,
+    n_gpu=1,
     async_sample=True,
     # gpu_per_run=1,
     # sample_gpu_per_run=0,
@@ -27,7 +27,7 @@ variant_levels.append(VariantLevel(keys, values, dir_names))
 
 variants, log_dirs = make_variants(*variant_levels)
 
-default_config_key = "r2d1_test"
+default_config_key = "async_alt_pabti"
 
 run_experiments(
     script=script,
