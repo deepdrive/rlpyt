@@ -9,6 +9,9 @@ from rlpyt.envs.base import EnvSpaces, EnvStep
 from rlpyt.spaces.gym_wrapper import GymSpaceWrapper
 from rlpyt.utils.collections import is_namedtuple_class
 
+import deepdrive_zero
+from deepdrive_zero import player
+from deepdrive_zero.experiments import utils
 
 class GymEnvWrapper(Wrapper):
     """Gym-style wrapper for converting the Openai Gym interface to the
@@ -96,10 +99,11 @@ def build_info_tuples(info, name="info"):
     # that off, (look for subprocess=True --> False), and then might
     # be able to define these directly within the class.
     ntc = globals().get(name)  # Define at module level for pickle.
+    info_keys = [str(k).replace(".", "_") for k in info.keys()]
     if ntc is None:
-        globals()[name] = namedtuple(name, list(info.keys()))
+        globals()[name] = namedtuple(name, info_keys)
     elif not (is_namedtuple_class(ntc) and
-            sorted(ntc._fields) == sorted(list(info.keys()))):
+            sorted(ntc._fields) == sorted(info_keys)):
         raise ValueError(f"Name clash in globals: {name}.")
     for k, v in info.items():
         if isinstance(v, dict):

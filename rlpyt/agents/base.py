@@ -9,6 +9,9 @@ from rlpyt.utils.synchronize import RWLock
 from rlpyt.utils.logging import logger
 from rlpyt.models.utils import strip_ddp_state_dict
 
+from rlpyt.spaces.int_box import IntBox
+from rlpyt.spaces.float_box import FloatBox
+
 AgentInputs = namedarraytuple("AgentInputs",
     ["observation", "prev_action", "prev_reward"])
 AgentStep = namedarraytuple("AgentStep", ["action", "agent_info"])
@@ -79,6 +82,10 @@ class BaseAgent:
             env_spaces: passed to ``make_env_to_model_kwargs()``, typically namedtuple of 'observation' and 'action'.
             share_memory (bool): whether to use shared memory for model parameters.
         """
+
+        # FloatBox(env_spaces.observation.low, env_spaces.observation.high)
+        # FloatBox(env_spaces.observation.low, env_spaces.observation.high)
+
         self.env_model_kwargs = self.make_env_to_model_kwargs(env_spaces)
         self.model = self.ModelCls(**self.env_model_kwargs,
             **self.model_kwargs)
