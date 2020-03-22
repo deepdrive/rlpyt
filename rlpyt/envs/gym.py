@@ -9,9 +9,6 @@ from rlpyt.envs.base import EnvSpaces, EnvStep
 from rlpyt.spaces.gym_wrapper import GymSpaceWrapper
 from rlpyt.utils.collections import is_namedtuple_class
 
-import deepdrive_zero
-from deepdrive_zero import player
-from deepdrive_zero.experiments import utils
 
 class GymEnvWrapper(Wrapper):
     """Gym-style wrapper for converting the Openai Gym interface to the
