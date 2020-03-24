@@ -75,3 +75,4 @@ class DqnAgent(EpsilonGreedyAgentMixin, BaseAgent):
     def update_target(self, tau=1):
         """Copies the model parameters into the target model."""
         update_state_dict(self.target_model, self.model.state_dict(), tau)
+

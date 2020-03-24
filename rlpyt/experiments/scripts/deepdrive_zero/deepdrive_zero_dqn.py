@@ -11,15 +11,22 @@ example.
 
 from deepdrive_zero.envs.env import Deepdrive2DEnv
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
-from rlpyt.algos.qpg.ddpg import DDPG
-from rlpyt.agents.qpg.ddpg_agent import DdpgAgent
+from rlpyt.samplers.serial.sampler import SerialSampler
+from rlpyt.algos.dqn.dqn import DQN
+from rlpyt.agents.dqn.deepdrive.deepdrive_dqn_agent import DeepDriveDqnAgent
+from rlpyt.agents.dqn.epsilon_greedy import EpsilonGreedyAgentMixin
+from rlpyt.agents.dqn.catdqn_agent import CatDqnAgent, CategoricalEpsilonGreedy
 from rlpyt.runners.minibatch_rl import MinibatchRlEval
 from rlpyt.utils.logging.context import logger_context
-from rlpyt.envs.gym import GymEnvWrapper
+from rlpyt.envs.gym import GymEnvWrapper, GymSpaceWrapper
 from rlpyt.envs.base import EnvSpaces
+from rlpyt.spaces.int_box import IntBox
 
 import torch
 import numpy as np
+
+from gym import ActionWrapper
+import gym
 
 # env_config = dict(
 #     id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
@@ -56,10 +63,51 @@ env_config = dict(
 
 
 
+class DiscretizedActionWrapper(ActionWrapper):
+    """ Discretizes the action space of an `env` using
+        `transform.discretize()`.
+        The `reverse_action` method is currently not implemented.
+    """
+    def __init__(self, env):
+        super(DiscretizedActionWrapper, self).__init__(env)
+        discrete_acc = [-1.0, 0.0, 0.5, 1.0]
+        discrete_steer = [-0.2, -0.15, -0.10, -0.05, 0.0, 0.05, 0.10, 0.15, 0.2]
+        self.discrete_act = [discrete_acc, discrete_steer]  # acc, steer
+        self.n_acc = len(self.discrete_act[0])
+        self.n_steer = len(self.discrete_act[1])
+        self.action_space = gym.spaces.Discrete(self.n_acc * self.n_steer)
+        # self.action_space = IntBox(low=0, high=self.n_acc * self.n_steer, shape=(self.n_acc*self.n_steer,))
+
+    def step(self, action):
+        # action input is continues:
+        # **steer**
+        # > Heading angle of the ego
+        #
+        # **accel**
+        # > m/s/s of the ego, positive for forward, negative for reverse
+        #
+        # **brake**
+        # > From 0g at -1 to 1g at 1 of brake force
+
+        acc = self.discrete_act[0][action // self.n_steer]
+        steer = self.discrete_act[1][action % self.n_steer]
+
+        if acc > 0:
+            accel = acc
+            brake = 0
+        else:
+            accel = 0
+            brake = -acc
+
+        act = np.array([steer, accel, brake])
+        return self.env.step(act)
+
 
 def make_env(*args, **kwargs):
     env = Deepdrive2DEnv()
     env.configure_env(kwargs)
+    env = DiscretizedActionWrapper(env)
+    # return env
     return GymEnvWrapper(env)
 
 
@@ -77,12 +125,12 @@ def build_and_train(run_ID=0, cuda_idx=None):
     )
 
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
-    algo = DDPG(
+    algo = DQN(
         batch_size=64,
         replay_size=100000,
-        bootstrap_timelimit=False,
+        # bootstrap_timelimit=False,
     )
-    agent = DdpgAgent()
+    agent = DeepDriveDqnAgent()
 
     runner = MinibatchRlEval(
         algo=algo,
@@ -94,7 +142,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
     )
 
     config = dict(env_id=env_config['id'])
-    name = "ddpg_" + env_config['id']
+    name = "dqn_" + env_config['id']
     log_dir = "dd2d"
 
     with logger_context(log_dir, run_ID, name, config, snapshot_mode='last'):
@@ -109,8 +157,9 @@ def evaluate():
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
     env = Deepdrive2DEnv()
     env.configure_env(env_config)
+    env = DiscretizedActionWrapper(env)
 
-    agent = DdpgAgent()
+    agent = Deepdrive2DEnv()
     env_spaces = EnvSpaces(
             observation=env.observation_space,
             action=env.action_space,
@@ -140,6 +189,6 @@ if __name__ == "__main__":
         run_ID=args.run_ID,
         cuda_idx=args.cuda_idx,
     )
-    #
+
     # evaluate()
 

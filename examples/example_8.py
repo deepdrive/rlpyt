@@ -20,7 +20,7 @@ from rlpyt.runners.minibatch_rl import MinibatchRlEval
 from rlpyt.utils.logging.context import logger_context
 
 
-def build_and_train(env_id="Hopper-v3", run_ID=0, cuda_idx=None):
+def build_and_train(env_id="LunarLanderContinuous-v2", run_ID=0, cuda_idx=None):
     sampler = SerialSampler(
         EnvCls=gym_make,
         env_kwargs=dict(id=env_id),
@@ -44,7 +44,7 @@ def build_and_train(env_id="Hopper-v3", run_ID=0, cuda_idx=None):
     )
     config = dict(env_id=env_id)
     name = "ddpg_" + env_id
-    log_dir = "example_1"
+    log_dir = "example_8"
     with logger_context(log_dir, run_ID, name, config):
         runner.train()
 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # for gym_make you have to have an env with Box observation and action space. It doesn't work for Discrete. Only work for continues action spaces ->deepdrive-zero: should be ok1
-    parser.add_argument('--env_id', help='environment ID', default='LunarLanderContinuous-v2') #default='Hopper-v3')  #  'BipedalWalkerHardcore-v3':ok, 'LunarLanderContinuous-v2':ok
+    parser.add_argument('--env_id', help='environment ID', default='LunarLanderContinuous-v2')  #  'BipedalWalkerHardcore-v3':ok, 'LunarLanderContinuous-v2':ok
     parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=0)
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=None)
     args = parser.parse_args()
