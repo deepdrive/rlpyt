@@ -136,10 +136,10 @@ if __name__ == "__main__":
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
     args = parser.parse_args()
 
-    build_and_train(
-        run_ID=args.run_ID,
-        cuda_idx=args.cuda_idx,
-    )
+    # build_and_train(
+    #     run_ID=args.run_ID,
+    #     cuda_idx=args.cuda_idx,
+    # )
     #
-    # evaluate()
+    evaluate()
 

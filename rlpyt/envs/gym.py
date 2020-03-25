@@ -10,6 +10,10 @@ from rlpyt.spaces.gym_wrapper import GymSpaceWrapper
 from rlpyt.utils.collections import is_namedtuple_class
 
 
+from gym import ActionWrapper
+from rlpyt.spaces.int_box import IntBox
+
+
 class GymEnvWrapper(Wrapper):
     """Gym-style wrapper for converting the Openai Gym interface to the
     rlpyt interface.  Action and observation spaces are wrapped by rlpyt's
@@ -170,3 +174,42 @@ def make(*args, info_example=None, **kwargs):
     else:
         return GymEnvWrapper(EnvInfoWrapper(
             gym.make(*args, **kwargs), info_example))
+
+
+
+class DeepDriveDiscretizeActionWrapper(ActionWrapper):
+    """ Discretizes the action space of deepdrive_zero env.
+    """
+    def __init__(self, env):
+        super(DeepDriveDiscretizeActionWrapper, self).__init__(env)
+        discrete_acc = [-1.0, 0.0, 0.5, 1.0]
+        discrete_steer = [-0.2, -0.15, -0.10, -0.05, 0.0, 0.05, 0.10, 0.15, 0.2]
+        self.discrete_act = [discrete_acc, discrete_steer]  # acc, steer
+        self.n_acc = len(self.discrete_act[0])
+        self.n_steer = len(self.discrete_act[1])
+        self.action_space = gym.spaces.Discrete(self.n_acc * self.n_steer)
+        # self.action_space = IntBox(low=0, high=self.n_acc * self.n_steer, shape=(self.n_acc*self.n_steer,))
+
+    def step(self, action):
+        # action input is continues:
+        # **steer**
+        # > Heading angle of the ego
+        #
+        # **accel**
+        # > m/s/s of the ego, positive for forward, negative for reverse
+        #
+        # **brake**
+        # > From 0g at -1 to 1g at 1 of brake force
+
+        acc = self.discrete_act[0][action // self.n_steer]
+        steer = self.discrete_act[1][action % self.n_steer]
+
+        if acc > 0:
+            accel = acc
+            brake = 0
+        else:
+            accel = 0
+            brake = -acc
+
+        act = np.array([steer, accel, brake])
+        return self.env.step(act)

@@ -10,23 +10,19 @@ example.
 """
 
 from deepdrive_zero.envs.env import Deepdrive2DEnv
+
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
-from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.algos.dqn.dqn import DQN
 from rlpyt.agents.dqn.deepdrive.deepdrive_dqn_agent import DeepDriveDqnAgent
-from rlpyt.agents.dqn.epsilon_greedy import EpsilonGreedyAgentMixin
-from rlpyt.agents.dqn.catdqn_agent import CatDqnAgent, CategoricalEpsilonGreedy
 from rlpyt.runners.minibatch_rl import MinibatchRlEval
 from rlpyt.utils.logging.context import logger_context
-from rlpyt.envs.gym import GymEnvWrapper, GymSpaceWrapper
+from rlpyt.envs.gym import GymEnvWrapper
 from rlpyt.envs.base import EnvSpaces
-from rlpyt.spaces.int_box import IntBox
+from rlpyt.envs.gym import DeepDriveDiscretizeActionWrapper
 
 import torch
 import numpy as np
 
-from gym import ActionWrapper
-import gym
 
 # env_config = dict(
 #     id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
@@ -58,55 +54,16 @@ env_config = dict(
     end_on_harmful_gs=False,
     incent_win=True,
     constrain_controls=False,
-    dummy_accel_agent_indices=[1]
+    # dummy_accel_agent_indices=[1]
 )
 
 
-
-class DiscretizedActionWrapper(ActionWrapper):
-    """ Discretizes the action space of an `env` using
-        `transform.discretize()`.
-        The `reverse_action` method is currently not implemented.
-    """
-    def __init__(self, env):
-        super(DiscretizedActionWrapper, self).__init__(env)
-        discrete_acc = [-1.0, 0.0, 0.5, 1.0]
-        discrete_steer = [-0.2, -0.15, -0.10, -0.05, 0.0, 0.05, 0.10, 0.15, 0.2]
-        self.discrete_act = [discrete_acc, discrete_steer]  # acc, steer
-        self.n_acc = len(self.discrete_act[0])
-        self.n_steer = len(self.discrete_act[1])
-        self.action_space = gym.spaces.Discrete(self.n_acc * self.n_steer)
-        # self.action_space = IntBox(low=0, high=self.n_acc * self.n_steer, shape=(self.n_acc*self.n_steer,))
-
-    def step(self, action):
-        # action input is continues:
-        # **steer**
-        # > Heading angle of the ego
-        #
-        # **accel**
-        # > m/s/s of the ego, positive for forward, negative for reverse
-        #
-        # **brake**
-        # > From 0g at -1 to 1g at 1 of brake force
-
-        acc = self.discrete_act[0][action // self.n_steer]
-        steer = self.discrete_act[1][action % self.n_steer]
-
-        if acc > 0:
-            accel = acc
-            brake = 0
-        else:
-            accel = 0
-            brake = -acc
-
-        act = np.array([steer, accel, brake])
-        return self.env.step(act)
 
 
 def make_env(*args, **kwargs):
     env = Deepdrive2DEnv()
     env.configure_env(kwargs)
-    env = DiscretizedActionWrapper(env)
+    env = DeepDriveDiscretizeActionWrapper(env)
     # return env
     return GymEnvWrapper(env)
 
@@ -117,9 +74,9 @@ def build_and_train(run_ID=0, cuda_idx=None):
         env_kwargs=env_config,
         eval_env_kwargs=env_config,
         batch_T=4,  # One time-step per sampler iteration.
-        batch_B=8,  # One environment (i.e. sampler Batch dimension).
+        batch_B=4,  # One environment (i.e. sampler Batch dimension).
         max_decorrelation_steps=0,
-        eval_n_envs=10,
+        eval_n_envs=4,
         eval_max_steps=int(51e3),
         eval_max_trajectories=50,
     )
@@ -136,9 +93,9 @@ def build_and_train(run_ID=0, cuda_idx=None):
         algo=algo,
         agent=agent,
         sampler=sampler,
-        n_steps=1e6,
+        n_steps=2e5,
         log_interval_steps=1e3,
-        affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0,1,2,3,4,5,6]),
+        affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0,1,2,3,4]),
     )
 
     config = dict(env_id=env_config['id'])
@@ -150,22 +107,23 @@ def build_and_train(run_ID=0, cuda_idx=None):
 
 
 def evaluate():
-    pre_trained_model = '/home/isaac/codes/dd-zero/rlpyt/data/local/2020_03-23_20-18.59/dd2d/run_0/params.pkl'
+    pre_trained_model = '/home/isaac/codes/dd-zero/rlpyt/data/local/2020_03-25_00-06.00/dd2d/run_0/params.pkl'
     data = torch.load(pre_trained_model)
     agent_state_dict = data['agent_state_dict']
 
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
     env = Deepdrive2DEnv()
     env.configure_env(env_config)
-    env = DiscretizedActionWrapper(env)
+    env = DeepDriveDiscretizeActionWrapper(env)
 
-    agent = Deepdrive2DEnv()
+    agent = DeepDriveDqnAgent()
     env_spaces = EnvSpaces(
             observation=env.observation_space,
             action=env.action_space,
     )
     agent.initialize(env_spaces)
-    agent.load_state_dict(agent_state_dict)
+    # agent.target_model.load_state_dict(agent_state_dict)
+    agent.load_state_dict(agent_state_dict['model'])
 
     obs = env.reset()
     while True:
@@ -185,10 +143,10 @@ if __name__ == "__main__":
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
     args = parser.parse_args()
 
-    build_and_train(
-        run_ID=args.run_ID,
-        cuda_idx=args.cuda_idx,
-    )
+    # build_and_train(
+    #     run_ID=args.run_ID,
+    #     cuda_idx=args.cuda_idx,
+    # )
 
-    # evaluate()
+    evaluate()
 

@@ -17,23 +17,12 @@ class DeepDriveDqnModel(torch.nn.Module):
             observation_shape,
             output_size,
             fc_sizes=256,
-            dueling=False,
-            use_maxpool=False
+            dueling=False
             ):
         """Instantiates the neural network according to arguments; network defaults
         stored within this method."""
         super().__init__()
         self.dueling = dueling
-        in_shape = observation_shape
-        # self.conv = Conv2dModel(
-        #     in_channels=c,
-        #     channels=channels or [32, 64, 64],
-        #     kernel_sizes=kernel_sizes or [8, 4, 3],
-        #     strides=strides or [4, 2, 1],
-        #     paddings=paddings or [0, 1, 1],
-        #     use_maxpool=use_maxpool,
-        # )
-        # conv_out_size = self.conv.conv_out_size(h, w)
         input_shape = observation_shape[0]
         self.fc1 = torch.nn.Linear(input_shape, fc_sizes)
         if dueling:
