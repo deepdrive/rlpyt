@@ -68,35 +68,42 @@ def make_env(*args, **kwargs):
     return GymEnvWrapper(env)
 
 
-def build_and_train(run_ID=0, cuda_idx=None):
+def build_and_train(run_ID=0, cuda_idx=None, resume_chkpnt=None):
     sampler = CpuSampler(
         EnvCls=make_env,
         env_kwargs=env_config,
         eval_env_kwargs=env_config,
         batch_T=4,  # One time-step per sampler iteration.
-        batch_B=4,  # One environment (i.e. sampler Batch dimension).
+        batch_B=5,  # One environment (i.e. sampler Batch dimension).
         max_decorrelation_steps=0,
-        eval_n_envs=4,
+        eval_n_envs=5,
         eval_max_steps=int(51e3),
         eval_max_trajectories=50,
     )
 
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
     algo = DQN(
-        batch_size=64,
-        replay_size=100000,
-        # bootstrap_timelimit=False,
+        batch_size=128,
+        replay_size=1000000,
     )
-    agent = DeepDriveDqnAgent()
+
+    if resume_chkpnt is not None:
+        print('Continue from previous checkpoint ...')
+        data = torch.load(resume_chkpnt)
+        agent_state_dict = data['agent_state_dict']
+        agent = DeepDriveDqnAgent(initial_model_state_dict=agent_state_dict['model'])
+    else:
+        agent = DeepDriveDqnAgent()
 
     runner = MinibatchRlEval(
         algo=algo,
         agent=agent,
         sampler=sampler,
-        n_steps=2e5,
+        n_steps=5e5,
         log_interval_steps=1e3,
         affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0,1,2,3,4]),
     )
+
 
     config = dict(env_id=env_config['id'])
     name = "dqn_" + env_config['id']
@@ -141,12 +148,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=0)
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
+    parser.add_argument('--resume_chkpnt', help='set path to pre-trained model', type=str,
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_03-25_00-06.00/dd2d/run_0/params.pkl')
     args = parser.parse_args()
 
-    # build_and_train(
-    #     run_ID=args.run_ID,
-    #     cuda_idx=args.cuda_idx,
-    # )
+    build_and_train(
+        run_ID=args.run_ID,
+        cuda_idx=args.cuda_idx,
+        resume_chkpnt=args.resume_chkpnt,
+    )
 
-    evaluate()
+    # evaluate()
 
