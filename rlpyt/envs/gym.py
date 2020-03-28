@@ -182,13 +182,21 @@ class DeepDriveDiscretizeActionWrapper(ActionWrapper):
     """
     def __init__(self, env):
         super(DeepDriveDiscretizeActionWrapper, self).__init__(env)
-        discrete_acc = [-1.0, 0.0, 0.5, 1.0]
-        discrete_steer = [-0.2, -0.15, -0.10, -0.05, 0.0, 0.05, 0.10, 0.15, 0.2]
-        self.discrete_act = [discrete_acc, discrete_steer]  # acc, steer
-        self.n_acc = len(self.discrete_act[0])
-        self.n_steer = len(self.discrete_act[1])
-        self.action_space = gym.spaces.Discrete(self.n_acc * self.n_steer)
+        discrete_steer = [0.0] #[-0.5, -0.3, -0.2, 0.0, 0.2, 0.3, 0.5]
+        discrete_acc   = [-1.0, 1.0]
+        discrete_brake = [0.0]
+        self.discrete_act = [discrete_steer, discrete_acc, discrete_brake]  # acc, steer
+        self.n_steer = len(self.discrete_act[0])
+        self.n_acc = len(self.discrete_act[1])
+        self.n_brake = len(self.discrete_act[2])
+        self.action_space = gym.spaces.Discrete(self.n_steer * self.n_acc * self.n_brake)
         # self.action_space = IntBox(low=0, high=self.n_acc * self.n_steer, shape=(self.n_acc*self.n_steer,))
+
+        self.action_items = []
+        for s in discrete_steer:
+            for a in discrete_acc:
+                for b in discrete_brake:
+                    self.action_items.append([s, a, b])
 
     def step(self, action):
         # action input is continues:
@@ -201,15 +209,17 @@ class DeepDriveDiscretizeActionWrapper(ActionWrapper):
         # **brake**
         # > From 0g at -1 to 1g at 1 of brake force
 
-        acc = self.discrete_act[0][action // self.n_steer]
-        steer = self.discrete_act[1][action % self.n_steer]
+        # steer = self.discrete_act[0][action % self.n_steer]
+        # acc = self.discrete_act[1][action // self.n_steer]
+        #
+        # if acc > 0:
+        #     accel = acc
+        #     brake = 0
+        # else:
+        #     accel = 0
+        #     brake = -acc
+        # act = np.array([steer, accel, brake])
 
-        if acc > 0:
-            accel = acc
-            brake = 0
-        else:
-            accel = 0
-            brake = -acc
-
-        act = np.array([steer, accel, brake])
+        act = self.action_items[action]
+        # print('act: {} \n'.format(act))
         return self.env.step(act)

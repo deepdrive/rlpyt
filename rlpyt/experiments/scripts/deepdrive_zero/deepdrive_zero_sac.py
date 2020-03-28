@@ -25,23 +25,21 @@ import numpy as np
 
 env_config = dict(
     id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
-    # id = 'deepdrive-2d-v0',
-    # id='deepdrive-2d-intersection-w-gs-v0',
-    # id='deepdrive-2d-intersection-v0',
     is_intersection_map=True,
+    expect_normalized_actions = True,
     expect_normalized_action_deltas=True,
-    jerk_penalty_coeff=0.1,
-    gforce_penalty_coeff=0.1,
+    jerk_penalty_coeff=0.0,
+    gforce_penalty_coeff=0.0,
     end_on_harmful_gs=False,
     incent_win=True,
     constrain_controls=False,
+    physics_steps_per_observation=6,
 )
 
 
 def make_env(*args, **kwargs):
     env = Deepdrive2DEnv()
     env.configure_env(kwargs)
-    # env.render()
     return GymEnvWrapper(env)
 
 
@@ -61,7 +59,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
     algo = SAC(
         batch_size=64,
-        replay_size=100000,
+        replay_size=1000000,
         bootstrap_timelimit=False,
     )
     agent = SacAgent()
@@ -70,21 +68,23 @@ def build_and_train(run_ID=0, cuda_idx=None):
         algo=algo,
         agent=agent,
         sampler=sampler,
-        n_steps=1e6,
+        n_steps=5e6,
         log_interval_steps=1e3,
         affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0,1,2,3,4,5,6]),
     )
 
     config = dict(env_id=env_config['id'])
-    name = "sac_" + env_config['id']
-    log_dir = "dd2d"
+
+    algo_name = 'sac_'
+    name = algo_name + env_config['id']
+    log_dir = algo_name + "ddzero"
 
     with logger_context(log_dir, run_ID, name, config, snapshot_mode='last'):
         runner.train()
 
 
 def evaluate():
-    pre_trained_model = '/home/isaac/codes/dd-zero/rlpyt/data/local/2020_03-23_13-54.23/dd2d/run_0/params.pkl'
+    pre_trained_model = '/home/isaac/codes/dd-zero/rlpyt/data/local/2020_03-27_16-55.01/dd2d/run_0/params.pkl'
     data = torch.load(pre_trained_model)
     agent_state_dict = data['agent_state_dict']
 
@@ -116,11 +116,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=0)
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
-    args = parser.parse_args()
-    build_and_train(
-        run_ID=args.run_ID,
-        cuda_idx=args.cuda_idx,
-    )
+    parser.add_argument('--no-timeout', help='consider timeout or not ', default=True)
 
-    # evaluate()
+    args = parser.parse_args()
+
+    # build_and_train(
+    #     run_ID=args.run_ID,
+    #     cuda_idx=args.cuda_idx,
+    # )
+
+    evaluate()
 

@@ -134,6 +134,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=0)
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
+    parser.add_argument('--no-timeout', help='consider timeout or not ', default=True)
+
     args = parser.parse_args()
 
     # build_and_train(
