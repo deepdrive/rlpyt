@@ -176,27 +176,29 @@ def make(*args, info_example=None, **kwargs):
             gym.make(*args, **kwargs), info_example))
 
 
-
 class DeepDriveDiscretizeActionWrapper(ActionWrapper):
     """ Discretizes the action space of deepdrive_zero env.
     """
     def __init__(self, env):
         super(DeepDriveDiscretizeActionWrapper, self).__init__(env)
-        discrete_steer = [0.0] #[-0.5, -0.3, -0.2, 0.0, 0.2, 0.3, 0.5]
-        discrete_acc   = [-1.0, 1.0]
-        discrete_brake = [0.0]
-        self.discrete_act = [discrete_steer, discrete_acc, discrete_brake]  # acc, steer
+        discrete_steer = list(np.arange(-1, 1.01, .2))
+        discrete_acc   = list(np.arange(-1, 1.01, 1.))
+        # discrete_brake = list(np.arange(-1, 1.01, 1.))
+        self.discrete_act = [discrete_steer, discrete_acc]  # acc, steer
         self.n_steer = len(self.discrete_act[0])
         self.n_acc = len(self.discrete_act[1])
-        self.n_brake = len(self.discrete_act[2])
-        self.action_space = gym.spaces.Discrete(self.n_steer * self.n_acc * self.n_brake)
+        # self.n_brake = len(self.discrete_act[2])
+        self.action_space = gym.spaces.Discrete(self.n_steer * self.n_acc)
         # self.action_space = IntBox(low=0, high=self.n_acc * self.n_steer, shape=(self.n_acc*self.n_steer,))
 
         self.action_items = []
         for s in discrete_steer:
             for a in discrete_acc:
-                for b in discrete_brake:
-                    self.action_items.append([s, a, b])
+                # for b in discrete_brake:
+                if a >= 0:
+                    self.action_items.append([s, a, 0])
+                else:
+                    self.action_items.append([s, 0, -a])
 
     def step(self, action):
         # action input is continues:

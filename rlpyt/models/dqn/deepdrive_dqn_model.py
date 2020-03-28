@@ -17,16 +17,15 @@ class DeepDriveDqnModel(torch.nn.Module):
             observation_shape,
             output_size,
             fc_sizes=256,
-            dueling=True
+            dueling=False
             ):
         """Instantiates the neural network according to arguments; network defaults
         stored within this method."""
         super().__init__()
         self.dueling = dueling
         input_shape = observation_shape[0]
-        # self.base_net = torch.nn.Linear(input_shape, fc_sizes)
-        # TODO: use more powerful network
-        self.base_net = MlpModel(input_shape, 512, fc_sizes)
+        self.base_net = torch.nn.Linear(input_shape, fc_sizes)
+        # self.base_net = MlpModel(input_shape, 256, fc_sizes)
 
         if dueling:
             self.head = DuelingHeadModel(fc_sizes, fc_sizes, output_size)

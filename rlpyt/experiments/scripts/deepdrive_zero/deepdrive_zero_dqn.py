@@ -19,39 +19,21 @@ from rlpyt.utils.logging.context import logger_context
 from rlpyt.envs.gym import GymEnvWrapper
 from rlpyt.envs.base import EnvSpaces
 from rlpyt.envs.gym import DeepDriveDiscretizeActionWrapper
+from rlpyt.utils.launching.affinity import make_affinity
+from rlpyt.samplers.async_.cpu_sampler import AsyncCpuSampler
+from rlpyt.runners.async_rl import AsyncRlEval
 
 import torch
 import numpy as np
 
 
-# env_config = dict(
-#     id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
-#     # id = 'deepdrive-2d-one-waypoint-v0',
-#     is_intersection_map=True,
-#     jerk_penalty_coeff=0, #0.10,
-#     gforce_penalty_coeff=0, #0.031,
-#     lane_penalty_coeff=0.05, #0.05
-#     collision_penalty_coeff=0.31,
-#     speed_reward_coeff=0.50,
-#     win_coefficient=1,
-#     end_on_harmful_gs=True,
-#     constrain_controls=True,
-#     ignore_brake=False,
-#     forbid_deceleration=False,
-#     expect_normalized_action_deltas=True,
-#     incent_win=True,
-#     # dummy_accel_agent_indices=[1],
-#     wait_for_action=False,
-#     incent_yield_to_oncoming_traffic=True,
-#     physics_steps_per_observation=6
-# )
-
-
 env_config = dict(
     id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
+    # id='deepdrive-2d-v0',
     is_intersection_map=True,
-    expect_normalized_actions = True,
-    expect_normalized_action_deltas=True,
+    is_one_waypoint_map=False,
+    expect_normalized_actions=True,
+    expect_normalized_action_deltas=False,
     jerk_penalty_coeff=0.0,
     gforce_penalty_coeff=0.0,
     end_on_harmful_gs=False,
@@ -69,16 +51,16 @@ def make_env(*args, **kwargs):
 
 
 def build_and_train(run_ID=0, cuda_idx=None, resume_chkpnt=None):
-    sampler = CpuSampler(
+    sampler = AsyncCpuSampler(
         EnvCls=make_env,
         env_kwargs=env_config,
         eval_env_kwargs=env_config,
         batch_T=4,  # One time-step per sampler iteration.
         batch_B=16,  # One environment (i.e. sampler Batch dimension).
-        max_decorrelation_steps=0,
-        eval_n_envs=10,
-        eval_max_steps=int(51e3),
-        eval_max_trajectories=50,
+        max_decorrelation_steps=100,
+        eval_n_envs=2,
+        eval_max_steps=int(10e3),
+        eval_max_trajectories=4,
     )
 
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
@@ -94,33 +76,45 @@ def build_and_train(run_ID=0, cuda_idx=None, resume_chkpnt=None):
 
     algo = DQN(
         initial_optim_state_dict=optimizer_state_dict,
-        min_steps_learn=int(1e3),
-        n_step_return=1,
-        delta_clip=.5,
-        eps_steps=int(1e5),
-        learning_rate=1e-4,
-        target_update_tau=0.01,
-        replay_ratio=32,
-        clip_grad_norm=10,
+        min_steps_learn=int(1e4),
+        # n_step_return=1,
+        # delta_clip=.5,
+        # eps_steps=int(1e5),
+        # learning_rate=1e-4,
+        # target_update_tau=0.01,
+        replay_ratio=8,
+        # clip_grad_norm=10,
         # prioritized_replay = True,
-        double_dqn = True,
-        batch_size = 64,
-        replay_size = int(1e5),
+        # double_dqn = True,
+        # batch_size = 64,
+        replay_size=int(1e5),
     )
 
     agent = DeepDriveDqnAgent(initial_model_state_dict=agent_state_dict)
 
-    runner = MinibatchRlEval(
+    affinity = make_affinity(
+        run_slot=0,
+        n_cpu_core=6,  # Use 16 cores across all experiments.
+        n_gpu=1,  # Use 8 gpus across all experiments.
+        sample_gpu_per_run=0,
+        async_sample=True,
+        # hyperthread_offset=24,  # If machine has 24 cores.
+        # n_socket=2,  # Presume CPU socket affinity to lower/upper half GPUs.
+        # gpu_per_run=2,  # How many GPUs to parallelize one run across.
+        # cpu_per_run=1,
+    )
+
+    runner = AsyncRlEval(
         algo=algo,
         agent=agent,
         sampler=sampler,
-        n_steps=3e7,
-        log_interval_steps=1e3,
-        affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0,1,2,3,4,5,6]),
+        n_steps=2e7,
+        log_interval_steps=1e4,
+        affinity=affinity
     )
 
     config = dict(env_id=env_config['id'])
-    algo_name = 'dqn_'
+    algo_name = 'async_dqn_'
     name = algo_name + env_config['id']
     log_dir = algo_name + "ddzero"
 
@@ -161,13 +155,13 @@ def test():
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
     env = Deepdrive2DEnv()
     env.configure_env(env_config)
-    env = DeepDriveDiscretizeActionWrapper(env)
+    # env = DeepDriveDiscretizeActionWrapper(env)
 
     for i in range(5):
         obs = env.reset()
         while True:
-            # a = np.array([1])
-            a = np.random.randint(0, env.action_space.n)
+            a = np.array([0, 10, 0])
+            # a = np.random.randint(0, env.action_space.n)
             obs, reward, done, info = env.step(a)
             env.render()
             if done:
@@ -181,7 +175,7 @@ if __name__ == "__main__":
     parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=0)
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
     parser.add_argument('--resume_chkpnt', help='set path to pre-trained model', type=str,
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_03-27_19-42.42/dqn_ddzero/run_0/params.pkl')
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_03-28_06-36.57/dqn_ddzero/run_0/params.pkl')
     parser.add_argument('--no-timeout', help='consider timeout or not ', default=True)
 
     args = parser.parse_args()
