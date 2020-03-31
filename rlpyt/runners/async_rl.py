@@ -87,6 +87,10 @@ class AsyncRlBase(BaseRunner):
         throttle_itr, delta_throttle_itr = self.startup()
         throttle_time = 0.
         sampler_itr = itr = 0
+
+        # TODO: train mode
+        self.agent.model.train()
+
         if self._eval:
             while self.ctrl.sampler_itr.value < 1:  # Sampler does eval first.
                 time.sleep(THROTTLE_WAIT)

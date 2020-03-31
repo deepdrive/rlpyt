@@ -24,7 +24,7 @@ from rlpyt.runners.minibatch_rl import MinibatchRlEval, MinibatchRl
 from rlpyt.utils.logging.context import logger_context
 from rlpyt.envs.gym import GymEnvWrapper
 from rlpyt.envs.base import EnvSpaces
-from rlpyt.envs.gym import DeepDriveDiscretizeActionWrapper
+from rlpyt.utils.wrappers import DeepDriveDiscretizeActionWrapper
 from rlpyt.utils.launching.affinity import make_affinity
 from rlpyt.samplers.async_.cpu_sampler import AsyncCpuSampler
 from rlpyt.runners.async_rl import AsyncRlEval
