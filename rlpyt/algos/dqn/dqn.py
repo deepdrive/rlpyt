@@ -92,6 +92,7 @@ class DQN(RlAlgorithm):
             f"updates per iteration.")
         self.min_itr_learn = int(self.min_steps_learn // sampler_bs)
         eps_itr_max = max(1, int(self.eps_steps // sampler_bs))
+
         agent.set_epsilon_itr_min_max(self.min_itr_learn, eps_itr_max)
         self.initialize_replay_buffer(examples, batch_spec)
         self.optim_initialize(rank)

@@ -26,10 +26,14 @@ import numpy as np
 env_config = dict(
     id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
     is_intersection_map=True,
-    expect_normalized_actions = True,
-    expect_normalized_action_deltas=True,
+    is_one_waypoint_map=False,
+    expect_normalized_actions=True,
+    expect_normalized_action_deltas=False,
     jerk_penalty_coeff=0.0,
     gforce_penalty_coeff=0.0,
+    lane_penalty_coeff=0.02,
+    collision_penalty_coeff=0.31,
+    speed_reward_coeff=0.50,
     end_on_harmful_gs=False,
     incent_win=True,
     constrain_controls=False,
@@ -51,7 +55,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
         batch_T=4,  # One time-step per sampler iteration.
         batch_B=16,  # One environment (i.e. sampler Batch dimension).
         max_decorrelation_steps=0,
-        eval_n_envs=10,
+        eval_n_envs=2,
         eval_max_steps=int(51e3),
         eval_max_trajectories=50,
     )
@@ -59,7 +63,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
     algo = SAC(
         batch_size=64,
-        replay_size=1000000,
+        replay_size=100000,
         bootstrap_timelimit=False,
     )
     agent = SacAgent()
@@ -68,7 +72,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
         algo=algo,
         agent=agent,
         sampler=sampler,
-        n_steps=5e6,
+        n_steps=1e6,
         log_interval_steps=1e3,
         affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0,1,2,3,4,5,6]),
     )
@@ -77,14 +81,14 @@ def build_and_train(run_ID=0, cuda_idx=None):
 
     algo_name = 'sac_'
     name = algo_name + env_config['id']
-    log_dir = algo_name + "ddzero"
+    log_dir = algo_name + "dd0"
 
     with logger_context(log_dir, run_ID, name, config, snapshot_mode='last'):
         runner.train()
 
 
 def evaluate():
-    pre_trained_model = '/home/isaac/codes/dd-zero/rlpyt/data/local/2020_03-27_16-55.01/dd2d/run_0/params.pkl'
+    pre_trained_model = '/home/isaac/codes/dd-zero/rlpyt/data/local/2020_03-28_18-46.54/sac_ddzero/run_0/params.pkl'
     data = torch.load(pre_trained_model)
     agent_state_dict = data['agent_state_dict']
 

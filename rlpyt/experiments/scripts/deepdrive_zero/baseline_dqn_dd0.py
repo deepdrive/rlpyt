@@ -1,13 +1,9 @@
 from deepdrive_zero.envs.env import Deepdrive2DEnv
-import torch
+
 import numpy as np
-import tensorflow as tf
 
 from rlpyt.envs.gym import DeepDriveDiscretizeActionWrapper
 
-import gym
-
-from stable_baselines.common.vec_env import DummyVecEnv
 from stable_baselines.deepq.policies import MlpPolicy
 from stable_baselines import DQN
 
@@ -33,20 +29,22 @@ env.configure_env(env_config)
 env = DeepDriveDiscretizeActionWrapper(env)
 
 def train():
+    # baseline_dqn_dd0: layers: [128, 128], env action space: steer=[-1, 1, step=0.2], throttle=[-1, 0, 1], tensorboard: DQN_2
     model = DQN(MlpPolicy, env, policy_kwargs=dict(layers=[128, 128]), verbose=1, tensorboard_log="./dqn_dd0_tensorboard/")
 
-    model.learn(total_timesteps=int(1e6))
-    model.save("baseline_dqn_dd0")
+    model.learn(total_timesteps=int(2e5))
+    model.save("baseline_dqn_dd0_2")
 
 def test():
-    model = DQN.load("baseline_dqn_dd0")
-    obs = env.reset()
-    while True:
-        action, _states = model.predict(obs)
-        obs, rewards, dones, info = env.step(action)
-        env.render()
-        if dones:
-            break
+    model = DQN.load("baseline_dqn_dd0_2")
+    for _ in range(5):
+        obs = env.reset()
+        while True:
+            action, _states = model.predict(obs)
+            obs, rewards, dones, info = env.step(action)
+            env.render()
+            if dones:
+                break
 
 
 if __name__ == '__main__':

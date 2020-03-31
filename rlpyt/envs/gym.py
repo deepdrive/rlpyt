@@ -5,7 +5,7 @@ from gym import Wrapper
 from gym.wrappers.time_limit import TimeLimit
 from collections import namedtuple
 
-from rlpyt.envs.base import EnvSpaces, EnvStep
+from rlpyt.envs.base import EnvSpaces, EnvStep, Env
 from rlpyt.spaces.gym_wrapper import GymSpaceWrapper
 from rlpyt.utils.collections import is_namedtuple_class
 
@@ -176,20 +176,20 @@ def make(*args, info_example=None, **kwargs):
             gym.make(*args, **kwargs), info_example))
 
 
-class DeepDriveDiscretizeActionWrapper(ActionWrapper):
+class DeepDriveDiscretizeActionWrapper(ActionWrapper, Env):
     """ Discretizes the action space of deepdrive_zero env.
     """
     def __init__(self, env):
         super(DeepDriveDiscretizeActionWrapper, self).__init__(env)
-        discrete_steer = list(np.arange(-1, 1.01, .2))
-        discrete_acc   = list(np.arange(-1, 1.01, 1.))
+        discrete_steer = [-0.2, 0, 0.2]#list(np.arange(-1, 1.01, 0.2)) #list(np.arange(-1, 1.01, 0.08))
+        discrete_acc   = [1.0]
         # discrete_brake = list(np.arange(-1, 1.01, 1.))
         self.discrete_act = [discrete_steer, discrete_acc]  # acc, steer
         self.n_steer = len(self.discrete_act[0])
         self.n_acc = len(self.discrete_act[1])
         # self.n_brake = len(self.discrete_act[2])
         self.action_space = gym.spaces.Discrete(self.n_steer * self.n_acc)
-        # self.action_space = IntBox(low=0, high=self.n_acc * self.n_steer, shape=(self.n_acc*self.n_steer,))
+        # self.action_space = IntBox(low=0, high=self.n_acc * self.n_steer, shape=(1,))
 
         self.action_items = []
         for s in discrete_steer:
@@ -221,7 +221,10 @@ class DeepDriveDiscretizeActionWrapper(ActionWrapper):
         #     accel = 0
         #     brake = -acc
         # act = np.array([steer, accel, brake])
-
+        # try:
         act = self.action_items[action]
-        # print('act: {} \n'.format(act))
         return self.env.step(act)
+        # except:
+        #     print('error: ', action)
+        #     return self.env.step([0,0,0])
+

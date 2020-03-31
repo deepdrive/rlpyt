@@ -23,11 +23,13 @@ class DeepdriveR2d1Model(torch.nn.Module):
             lstm_size=512,
             head_size=256,
             dueling=False,
+            normalize_observation=False
             ):
         """Instantiates the neural network according to arguments; network defaults
         stored within this method."""
         super().__init__()
-        self._obs_n_dim = len(observation_shape)
+        self._obs_n_dim = 1#len(observation_shape)
+        self.normalize_observation=normalize_observation
         self.dueling = dueling
         self.mlp = MlpModel(observation_shape, [256],
                             output_size=fc_size,
