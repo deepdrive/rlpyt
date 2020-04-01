@@ -260,6 +260,9 @@ class MinibatchRl(MinibatchRlBase):
                 self.store_diagnostics(itr, traj_infos, opt_info)
                 if (itr + 1) % self.log_interval_itrs == 0:
                     self.log_diagnostics(itr)
+
+                logger.log(f"epsilon value: {self.agent.distribution._epsilon}")
+
         self.shutdown()
 
     def initialize_logging(self):

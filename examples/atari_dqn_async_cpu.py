@@ -13,6 +13,10 @@ from rlpyt.agents.dqn.atari.atari_dqn_agent import AtariDqnAgent
 from rlpyt.runners.async_rl import AsyncRlEval
 from rlpyt.utils.logging.context import logger_context
 
+import sys
+sys.path.append('~/home/isaac/codes/dd-zero/rlpyt/examples')
+from examples.example_9 import ResizeFrame, make_env_custom, CustomDqnAgent
+
 
 def build_and_train(game="pong", run_ID=0):
     # Change these inputs to match local machine and desired parallelism.
@@ -45,7 +49,9 @@ def build_and_train(game="pong", run_ID=0):
         min_steps_learn=1e4,
         replay_size=int(1e5)
     )
-    agent = AtariDqnAgent()
+    # agent = AtariDqnAgent()
+    agent = CustomDqnAgent()
+
     runner = AsyncRlEval(
         algo=algo,
         agent=agent,

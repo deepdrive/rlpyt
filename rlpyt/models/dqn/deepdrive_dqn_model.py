@@ -18,7 +18,7 @@ class DeepDriveDqnModel(torch.nn.Module):
             self,
             observation_shape,
             output_size,
-            fc_sizes=64,
+            fc_sizes=256,
             dueling=False,
             normalize_observation=False,
             norm_obs_clip=2,
@@ -26,28 +26,19 @@ class DeepDriveDqnModel(torch.nn.Module):
         ):
         """Instantiates the neural network according to arguments; network defaults
         stored within this method."""
-        super(DeepDriveDqnModel, self).__init__()
+        super().__init__()
         self.dueling = dueling
         self._obs_ndim = len(observation_shape)
         input_shape = observation_shape[0]
 
-        # self.base_net = torch.nn.Sequential(
-        #     torch.nn.Linear(input_shape, fc_sizes),
-        #     torch.nn.ReLU(),
-        #     torch.nn.Linear(fc_sizes, fc_sizes),
-        #     torch.nn.ReLU(),
-        #     torch.nn.Linear(fc_sizes, output_size),
-        # )
+        self.base_net = torch.nn.Sequential(
+            torch.nn.Linear(input_shape, fc_sizes),
+            torch.nn.ReLU(),
+            torch.nn.Linear(fc_sizes, fc_sizes),
+            torch.nn.ReLU(),
+            torch.nn.Linear(fc_sizes, output_size),
+        )
         # self.base_net.apply(self.init_weights)
-        in_channels = 3
-        n_actions = 6
-
-        self.conv1 = nn.Conv2d(in_channels, 32, kernel_size=4, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
-        self.fc4 = nn.Linear(7 * 7 * 64, 512)
-        self.head = nn.Linear(512, n_actions)
-
 
         # self.base_net = MlpModel(input_shape, [fc_sizes, fc_sizes], output_size)
 
@@ -78,57 +69,37 @@ class DeepDriveDqnModel(torch.nn.Module):
         storage and transfer).  Used in both sampler and in algorithm (both
         via the agent).
         """
-        # observation = observation.type(torch.float)
-        # lead_dim, T, B, obs_shape = infer_leading_dims(observation, self._obs_ndim)
+        observation = observation.type(torch.float)
+        lead_dim, T, B, obs_shape = infer_leading_dims(observation, self._obs_ndim)
+
+        obs = observation.view(T * B, -1)
+
+        # if self.normalize_observation:
+        #     # obs_var = self.obs_rms.var
+        #     # if self.norm_obs_var_clip is not None:
+        #     #     obs_var = torch.clamp(obs_var, min=self.norm_obs_var_clip)
+        #     # observation = torch.clamp((observation - self.obs_rms.mean) /
+        #     #     obs_var.sqrt(), -self.norm_obs_clip, self.norm_obs_clip)
+        #     new_mean = obs.mean(dim=0)
+        #     new_std = obs.std(dim=0)
         #
-        # obs = observation.view(T * B, -1)
+        #     self.tot_mean = (new_mean * obs.shape[1] + self.tot_mean * self.n_data) / (obs.shape[1] + self.n_data)
+        #     self.tot_std = (new_std * obs.shape[1] + self.tot_std * self.n_data) / (obs.shape[1] + self.n_data)
         #
-        # # if self.normalize_observation:
-        # #     # obs_var = self.obs_rms.var
-        # #     # if self.norm_obs_var_clip is not None:
-        # #     #     obs_var = torch.clamp(obs_var, min=self.norm_obs_var_clip)
-        # #     # observation = torch.clamp((observation - self.obs_rms.mean) /
-        # #     #     obs_var.sqrt(), -self.norm_obs_clip, self.norm_obs_clip)
-        # #     new_mean = obs.mean(dim=0)
-        # #     new_std = obs.std(dim=0)
-        # #
-        # #     self.tot_mean = (new_mean * obs.shape[1] + self.tot_mean * self.n_data) / (obs.shape[1] + self.n_data)
-        # #     self.tot_std = (new_std * obs.shape[1] + self.tot_std * self.n_data) / (obs.shape[1] + self.n_data)
-        # #
-        # #     obs = (obs - self.tot_mean) / (self.tot_std + 1e-8)
-        # #
-        # #     self.n_data += obs.shape[1]
+        #     obs = (obs - self.tot_mean) / (self.tot_std + 1e-8)
         #
-        # q = self.base_net(obs)
-        # # q = self.base_net(observation)
-        # # q = torch.relu(q)
-        # # q = self.head(x)
-        # q = restore_leading_dims(q, lead_dim, T, B)
-        # return q
+        #     self.n_data += obs.shape[1]
+
+        q = self.base_net(obs)
+        # q = self.base_net(observation)
+        # q = torch.relu(q)
+        # q = self.head(x)
+        q = restore_leading_dims(q, lead_dim, T, B)
+        return q
 
     # def update_obs_rms(self, observation):
     #     if self.normalize_observation:
     #         self.obs_rms.update(observation)
-
-        img = observation.type(torch.float)  # Expect torch.uint8 inputs
-        img = img.mul_(1. / 255)  # From [0-255] to [0-1], in place.
-
-        # Infer (presence of) leading dimensions: [T,B], [B], or [].
-        lead_dim, T, B, img_shape = infer_leading_dims(img, 3)
-
-
-        x = img.view(T * B, *img_shape[::-1])
-        # print(x.shape)
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-        # print(x.shape)
-        x = F.relu(self.fc4(x.view(x.size(0), -1)))
-        q = self.head(x)
-        q = restore_leading_dims(q, lead_dim, T, B)
-        return q
-
-
 
     def init_weights(self, m):
         if type(m) == torch.nn.Linear:

@@ -6,6 +6,7 @@ from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.async_.cpu_sampler import AsyncCpuSampler
 from rlpyt.algos.dqn.dqn import DQN
 from rlpyt.agents.dqn.dqn_agent import DqnAgent
+from rlpyt.agents.dqn.atari.atari_dqn_agent import AtariDqnAgent
 from rlpyt.runners.minibatch_rl import MinibatchRlEval, MinibatchRl
 from rlpyt.utils.logging.context import logger_context
 from rlpyt.envs.gym import GymEnvWrapper
@@ -19,7 +20,6 @@ import torch.nn.functional as F
 
 import numpy as np
 import gym
-import cv2
 
 
 ############################# classes and functions #############################
@@ -33,94 +33,85 @@ class CustomMixin:
 class CustomDqnModel(torch.nn.Module):
     def __init__(
             self,
-            in_channels=1,
-            n_actions=6,
+            observation_shape,
+            output_size,
+            fc_sizes=64
             ):
         super().__init__()
-        self.conv1 = nn.Conv2d(in_channels, 32, kernel_size=4, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
-        self.fc4 = nn.Linear(7 * 7 * 64, 512)
-        # self.fc4 = nn.Linear(10 * 7 * 64, 512)
-        self.fc5 = nn.Linear(512, 256)
-        self.head = nn.Linear(256, n_actions)
+        self._obs_ndim = len(observation_shape)
+        input_shape = observation_shape[0]
+
+        self.base_net = torch.nn.Sequential(
+            torch.nn.Linear(input_shape, fc_sizes),
+            torch.nn.ReLU(),
+            torch.nn.Linear(fc_sizes, fc_sizes),
+            torch.nn.ReLU(),
+            torch.nn.Linear(fc_sizes, output_size),
+        )
+        # self.base_net.apply(self.init_weights)
 
     def forward(self, observation, prev_action, prev_reward):
-        img = observation.type(torch.float)  # Expect torch.uint8 inputs
-        img = img.mul_(1. / 255)  # From [0-255] to [0-1], in place.
-        lead_dim, T, B, img_shape = infer_leading_dims(img, 3)
-        x = img.view(T * B, *img_shape[::-1])
-        # x = img.view(T * B, *img_shape)
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-        x = F.relu(self.fc4(x.view(x.size(0), -1)))
-        x = F.relu(self.fc5(x))
-        q = self.head(x)
+        observation = observation.type(torch.float)
+        lead_dim, T, B, obs_shape = infer_leading_dims(observation, self._obs_ndim)
+        obs = observation.view(T * B, -1)
+        q = self.base_net(obs)
         q = restore_leading_dims(q, lead_dim, T, B)
         return q
 
+    def init_weights(self, m):
+        if type(m) == torch.nn.Linear:
+            # torch.nn.init.xavier_normal_(m.weight.data)
+            # torch.nn.init.uniform_(m.bias.data)
+            torch.nn.init.normal_(m.weight)
+            torch.nn.init.zeros_(m.bias)
+
 
 # class CustomDqnAgent(CustomMixin, DqnAgent):
-class CustomDqnAgent(DqnAgent):
+class CustomDqnAgent(CustomMixin, AtariDqnAgent):
     def __init__(self, ModelCls=CustomDqnModel, **kwargs):
         super().__init__(ModelCls=ModelCls, **kwargs)
 
 
 def make_env_custom(*args, **kwargs):
-    env = gym.make('Pong-v0')
-    # env = make_env(env, scale=True)
-    # env = ResizeFrame(env)
-    env = MaxAndSkipEnv(env, skip=4)
-    env = WarpFrame(env)
-    env = FrameStack(env, 4)
+    env = gym.make('CartPole-v0')
     env = GymEnvWrapper(env)
     return env
 
 
 def build_and_train(run_ID=0, cuda_idx=None):
-    # env_id = 'CartPole-v0'
-    env_id = 'Pong-v0'
+    env_id = 'CartPole-v0'
 
-    sampler = AsyncCpuSampler(
+    sampler = SerialSampler(
         EnvCls=make_env_custom,
         env_kwargs=dict(id=env_id), #env_config,
         eval_env_kwargs=dict(id=env_id),  #env_config,
-        batch_T=16,  # One time-step per sampler iteration.
-        batch_B=32,  # One environment (i.e. sampler Batch dimension).
+        batch_T=1,  # One time-step per sampler iteration.
+        batch_B=1,  # One environment (i.e. sampler Batch dimension).
         max_decorrelation_steps=100,
-        eval_n_envs=2,
+        eval_n_envs=0,
         eval_max_steps=int(10e3),
         eval_max_trajectories=4,
     )
 
     algo = DQN(
-        replay_ratio = 8,
-        min_steps_learn = 1e4,
-        replay_size = int(1e5)
+        learning_rate=1e-4,
+        replay_ratio=1,
+        min_steps_learn=40,
+        eps_steps=60000,
+        replay_size=int(1e4),
+        double_dqn=True,
+        target_update_interval=20,
     )
 
     agent = CustomDqnAgent()
 
-    affinity = make_affinity(
-        run_slot=0,
-        n_cpu_core=3,  # Use 16 cores across all experiments.
-        n_gpu=1,  # Use 8 gpus across all experiments.
-        sample_gpu_per_run=0,
-        async_sample=True,
-        # hyperthread_offset=24,  # If machine has 24 cores.
-        # n_socket=2,  # Presume CPU socket affinity to lower/upper half GPUs.
-        # gpu_per_run=2,  # How many GPUs to parallelize one run across.
-        # cpu_per_run=1,
-    )
-
-    runner = AsyncRlEval(
+    runner = MinibatchRl(
         algo=algo,
         agent=agent,
         sampler=sampler,
         n_steps=2e6,
         log_interval_steps=1e3,
-        affinity=affinity #dict(cuda_idx=cuda_idx, workers_cpus=[0,1,2,4,5,6])
+        affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0,1,2,4,5,6])
     )
 
     config = dict(env_id=env_id)
@@ -130,6 +121,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
 
     with logger_context(log_dir, run_ID, name, config, snapshot_mode='last'):
         runner.train()
+
 
 if __name__ == "__main__":
     import argparse

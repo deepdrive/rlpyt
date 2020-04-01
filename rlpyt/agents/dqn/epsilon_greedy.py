@@ -38,6 +38,8 @@ class EpsilonGreedyAgentMixin:
         self._eps_itr_min_max[0] = eps_itr_min
         self._eps_itr_min_max[1] = eps_itr_max
 
+        #TODO: counter for time-steps
+
     def collector_initialize(self, global_B=1, env_ranks=None):
         """For vector-valued epsilon, the agent inside the sampler worker process
         must initialize with its own epsilon values."""
@@ -105,9 +107,9 @@ class EpsilonGreedyAgentMixin:
         if itr <= itr_max:
             prog = min(1, max(0, itr - itr_min) / (itr_max - itr_min))
             self.eps_sample = prog * self.eps_final + (1 - prog) * self.eps_init
-            if itr % (itr_max // 10) == 0 or itr == itr_max:
-                logger.log(f"Agent at itr {itr}, sample eps {self.eps_sample}"
-                    f" (min itr: {itr_min}, max_itr: {itr_max})")
+            # if itr % (itr_max // 10) == 0 or itr == itr_max:
+            logger.log(f"Agent at itr {itr}, sample eps {self.eps_sample}"
+                f" (min itr: {itr_min}, max_itr: {itr_max})")
         self.distribution.set_epsilon(self.eps_sample)
 
     # def sample_mode(self, itr):

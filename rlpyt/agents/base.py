@@ -59,6 +59,9 @@ class BaseAgent:
         self._send_count = mp.RawValue("l", 0)
         self._recv_count = 0
 
+        ## TODO: add fram idx counter for e-greedy action selection
+        self.frame_idx = 0
+
     def __call__(self, observation, prev_action, prev_reward):
         """Returns values from model forward pass on training data (i.e. used
         in algorithm)."""

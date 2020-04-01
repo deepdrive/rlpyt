@@ -9,10 +9,6 @@ example.
 """
 
 from deepdrive_zero.envs.env import Deepdrive2DEnv
-from deepdrive_zero.envs.variants import OneWaypointSteerOnlyEnv, \
-    OneWaypointEnv, IncentArrivalEnv, StaticObstacleEnv, \
-    NoGforcePenaltyEnv, SixtyFpsEnv, IntersectionEnv, IntersectionWithGsEnv, \
-    IntersectionWithGsAllowDecelEnv
 
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.samplers.parallel.gpu.sampler import GpuSampler
@@ -72,10 +68,10 @@ def build_and_train(run_ID=0, cuda_idx=None, resume_chkpnt=None):
         # eval_env_kwargs=dict(id='CartPole-v0'),  #env_config,
         env_kwargs=env_config,
         eval_env_kwargs=env_config,
-        batch_T=4,  # One time-step per sampler iteration.
-        batch_B=8,  # One environment (i.e. sampler Batch dimension).
+        batch_T=32,  # One time-step per sampler iteration.
+        batch_B=64,  # One environment (i.e. sampler Batch dimension).
         max_decorrelation_steps=100,
-        eval_n_envs=10,
+        eval_n_envs=2,
         eval_max_steps=int(50e3),
         eval_max_trajectories=50,
     )
@@ -93,20 +89,19 @@ def build_and_train(run_ID=0, cuda_idx=None, resume_chkpnt=None):
 
     algo = DQN(
         # discount=0.99,
-        # batch_size=32,
-        min_steps_learn=int(1e3),
-        # delta_clip=None, # selects the Huber loss; if ``None``, uses MSE.
+        batch_size=32,
+        min_steps_learn=32,
+        eps_steps=int(1e6),  # 1e6  # STILL IN ALGO (to convert to itr).
         replay_size=int(5e4),
-        replay_ratio=32,  # data_consumption / data_generation.
+        replay_ratio=8,  # data_consumption / data_generation.
         # target_update_tau=1,
-        # target_update_interval=200,  # 312 * 32 = 1e4 env steps.
+        target_update_interval=1000,  # 312 * 32 = 1e4 env steps.
         # n_step_return=1,
         learning_rate=0.001,
         # OptimCls=torch.optim.Adam,
         # optim_kwargs=None,
         # initial_optim_state_dict=optimizer_state_dict,
         # clip_grad_norm=2.,
-        eps_steps=int(1e4), #1e6  # STILL IN ALGO (to convert to itr).
         double_dqn=True,
         # prioritized_replay=False,
         # pri_alpha=0.6,
@@ -114,11 +109,14 @@ def build_and_train(run_ID=0, cuda_idx=None, resume_chkpnt=None):
         # pri_beta_final=1.,
         # pri_beta_steps=int(1e5),
         # default_priority=None,
-        ReplayBufferCls=UniformReplayBuffer,  # Leave None to select by above options.
+        # ReplayBufferCls=UniformReplayBuffer,  # Leave None to select by above options.
         # updates_per_sync=1,  # For async mode only.
     )
 
-    agent = DeepDriveDqnAgent()
+    agent = DeepDriveDqnAgent(eps_init=1,
+                              eps_final=0.01,
+                              eps_itr_min=50,
+                              eps_itr_max=100000)
 
     runner = MinibatchRlEval(
         algo=algo,
@@ -181,7 +179,7 @@ def evaluate(resume_chkpnt):
 def test():
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
     # env = Deepdrive2DEnv()
-    env = OneWaypointEnv()
+    env = Deepdrive2DEnv()
     env.configure_env(env_config)
     # env = DeepDriveDiscretizeActionWrapper(env)
 

@@ -106,11 +106,17 @@ class DQN(RlAlgorithm):
         self.initialize_replay_buffer(examples, batch_spec, async_=True)
         self.mid_batch_reset = mid_batch_reset
         self.sampler_bs = sampler_bs = batch_spec.size
+
         self.updates_per_optimize = self.updates_per_sync
         self.min_itr_learn = int(self.min_steps_learn // sampler_bs)
         eps_itr_max = max(1, int(self.eps_steps // sampler_bs))
         # Before any forking so all sub processes have epsilon schedule:
         agent.set_epsilon_itr_min_max(self.min_itr_learn, eps_itr_max)
+
+        # print('==============================================')
+        # print(sampler_n_itr, sampler_bs, self.min_steps_learn , self.eps_steps, self.min_itr_learn, eps_itr_max)
+        # print('==============================================')
+
         return self.replay_buffer
 
     def optim_initialize(self, rank=0):

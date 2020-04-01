@@ -3,6 +3,9 @@ import torch
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.nn.parallel import DistributedDataParallelCPU as DDPC
 
+import math
+import random
+
 from rlpyt.agents.base import BaseAgent, AgentStep
 from rlpyt.agents.dqn.epsilon_greedy import EpsilonGreedyAgentMixin
 from rlpyt.distributions.epsilon_greedy import EpsilonGreedy
@@ -42,6 +45,9 @@ class DqnAgent(EpsilonGreedyAgentMixin, BaseAgent):
         if env_ranks is not None:
             self.make_vec_eps(global_B, env_ranks)
 
+        ##
+        self.env_spaces = env_spaces
+
     def to_device(self, cuda_idx=None):
         super().to_device(cuda_idx)
         self.target_model.to(self.device)
@@ -60,6 +66,21 @@ class DqnAgent(EpsilonGreedyAgentMixin, BaseAgent):
         q = self.model(*model_inputs)
         q = q.cpu()
         action = self.distribution.sample(q)
+
+        ## TODO: implement my own e-greedy
+        # epsilon_start = 1.0
+        # epsilon_final = 0.01
+        # epsilon_decay = 500
+        # self.frame_idx += 1
+        # epsilon_by_frame = lambda frame_idx: epsilon_final + (epsilon_start - epsilon_final) * math.exp(-1. * frame_idx / epsilon_decay)
+        # eps = epsilon_by_frame(self.frame_idx)
+        # if random.random() > eps:
+        #     action = q.max(1)[1].item()
+        # else:
+        #     action = random.randrange(self.env_spaces.action.n)
+
+        ##=====================================
+
         agent_info = AgentInfo(q=q)
         # action, agent_info = buffer_to((action, agent_info), device="cpu")
         return AgentStep(action=action, agent_info=agent_info)
