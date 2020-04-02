@@ -2,7 +2,7 @@ from deepdrive_zero.envs.env import Deepdrive2DEnv
 
 import numpy as np
 
-from rlpyt.envs.gym import DeepDriveDiscretizeActionWrapper
+from rlpyt.utils.wrappers import DeepDriveDiscretizeActionWrapper
 
 from stable_baselines.deepq.policies import MlpPolicy
 from stable_baselines import DQN
@@ -30,13 +30,13 @@ env = DeepDriveDiscretizeActionWrapper(env)
 
 def train():
     # baseline_dqn_dd0: layers: [128, 128], env action space: steer=[-1, 1, step=0.2], throttle=[-1, 0, 1], tensorboard: DQN_2
-    model = DQN(MlpPolicy, env, policy_kwargs=dict(layers=[128, 128]), verbose=1, tensorboard_log="./dqn_dd0_tensorboard/")
+    model = DQN(MlpPolicy, env, policy_kwargs=dict(layers=[64, 64]), verbose=1, tensorboard_log="./dqn_dd0_tensorboard/")
 
     model.learn(total_timesteps=int(2e5))
-    model.save("baseline_dqn_dd0_2")
+    model.save("baseline_dqn_dd0_3")
 
 def test():
-    model = DQN.load("baseline_dqn_dd0_2")
+    model = DQN.load("baseline_dqn_dd0_3")
     for _ in range(5):
         obs = env.reset()
         while True:
@@ -48,5 +48,5 @@ def test():
 
 
 if __name__ == '__main__':
-    # train()
-    test()
+    train()
+    # test()

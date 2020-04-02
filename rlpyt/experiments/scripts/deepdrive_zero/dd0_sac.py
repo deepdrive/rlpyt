@@ -18,6 +18,7 @@ from rlpyt.runners.minibatch_rl import MinibatchRlEval
 from rlpyt.utils.logging.context import logger_context
 from rlpyt.envs.gym import GymEnvWrapper
 from rlpyt.envs.base import EnvSpaces
+from rlpyt.samplers.serial.sampler import SerialSampler
 
 import torch
 import numpy as np
@@ -48,12 +49,12 @@ def make_env(*args, **kwargs):
 
 
 def build_and_train(run_ID=0, cuda_idx=None):
-    sampler = CpuSampler(
+    sampler = SerialSampler(
         EnvCls=make_env,
         env_kwargs=env_config,
         eval_env_kwargs=env_config,
-        batch_T=4,  # One time-step per sampler iteration.
-        batch_B=16,  # One environment (i.e. sampler Batch dimension).
+        batch_T=1,  # One time-step per sampler iteration.
+        batch_B=1,  # One environment (i.e. sampler Batch dimension).
         max_decorrelation_steps=0,
         eval_n_envs=2,
         eval_max_steps=int(51e3),
@@ -124,10 +125,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # build_and_train(
-    #     run_ID=args.run_ID,
-    #     cuda_idx=args.cuda_idx,
-    # )
+    build_and_train(
+        run_ID=args.run_ID,
+        cuda_idx=args.cuda_idx,
+    )
 
-    evaluate()
+    # evaluate()
 

@@ -67,6 +67,8 @@ class DqnAgent(EpsilonGreedyAgentMixin, BaseAgent):
         q = q.cpu()
         action = self.distribution.sample(q)
 
+        # logger.log(f"epsilon in agent-step func is: {self.distribution._epsilon}")
+
         ## TODO: implement my own e-greedy
         # epsilon_start = 1.0
         # epsilon_final = 0.01

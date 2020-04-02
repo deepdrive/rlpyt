@@ -320,20 +320,22 @@ def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, 
 
 # added by Isaac
 from rlpyt.envs.base import Env
+from rlpyt.envs.gym import IntBox
+
 class DeepDriveDiscretizeActionWrapper(gym.ActionWrapper, Env):
     """ Discretizes the action space of deepdrive_zero env.
     """
     def __init__(self, env):
         super(DeepDriveDiscretizeActionWrapper, self).__init__(env)
-        discrete_steer = [-0.2, 0, 0.2]#list(np.arange(-1, 1.01, 0.2)) #list(np.arange(-1, 1.01, 0.08))
-        discrete_acc   = [1.0]
+        discrete_steer = list(np.arange(-1, 1.01, 0.2)) #list(np.arange(-1, 1.01, 0.08))
+        discrete_acc   = [-1, 0.0, 0.5, 1.0]
         # discrete_brake = list(np.arange(-1, 1.01, 1.))
         self.discrete_act = [discrete_steer, discrete_acc]  # acc, steer
         self.n_steer = len(self.discrete_act[0])
         self.n_acc = len(self.discrete_act[1])
         # self.n_brake = len(self.discrete_act[2])
         self.action_space = gym.spaces.Discrete(self.n_steer * self.n_acc)
-        # self.action_space = IntBox(low=0, high=self.n_acc * self.n_steer, shape=(1,))
+        # self.action_space = IntBox(low=0, high=self.n_acc * self.n_steer)
 
         self.action_items = []
         for s in discrete_steer:

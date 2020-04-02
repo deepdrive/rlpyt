@@ -8,6 +8,7 @@ from rlpyt.utils.logging import logger
 from rlpyt.replays.non_sequence.frame import (UniformReplayFrameBuffer,
     PrioritizedReplayFrameBuffer, AsyncUniformReplayFrameBuffer,
     AsyncPrioritizedReplayFrameBuffer)
+from rlpyt.replays.non_sequence.uniform import UniformReplayBuffer
 from rlpyt.utils.collections import namedarraytuple
 from rlpyt.utils.tensor import select_at_indexes, valid_mean
 from rlpyt.algos.utils import valid_from_done
@@ -74,6 +75,8 @@ class DQN(RlAlgorithm):
         save__init__args(locals())
         self.update_counter = 0
 
+        self.replaybuffercls = ReplayBufferCls
+
     def initialize(self, agent, n_itr, batch_spec, mid_batch_reset, examples,
             world_size=1, rank=0):
         """Stores input arguments and initializes replay buffer and optimizer.
@@ -113,10 +116,6 @@ class DQN(RlAlgorithm):
         # Before any forking so all sub processes have epsilon schedule:
         agent.set_epsilon_itr_min_max(self.min_itr_learn, eps_itr_max)
 
-        # print('==============================================')
-        # print(sampler_n_itr, sampler_bs, self.min_steps_learn , self.eps_steps, self.min_itr_learn, eps_itr_max)
-        # print('==============================================')
-
         return self.replay_buffer
 
     def optim_initialize(self, rank=0):
@@ -149,17 +148,22 @@ class DQN(RlAlgorithm):
             discount=self.discount,
             n_step_return=self.n_step_return,
         )
-        if self.prioritized_replay:
-            replay_kwargs.update(dict(
-                alpha=self.pri_alpha,
-                beta=self.pri_beta_init,
-                default_priority=self.default_priority,
-            ))
-            ReplayCls = (AsyncPrioritizedReplayFrameBuffer if async_ else
-                PrioritizedReplayFrameBuffer)
+
+        if self.replaybuffercls is None:
+            if self.prioritized_replay:
+                replay_kwargs.update(dict(
+                    alpha=self.pri_alpha,
+                    beta=self.pri_beta_init,
+                    default_priority=self.default_priority,
+                ))
+                ReplayCls = (AsyncPrioritizedReplayFrameBuffer if async_ else
+                    PrioritizedReplayFrameBuffer)
+            else:
+                ReplayCls = (AsyncUniformReplayFrameBuffer if async_ else
+                    UniformReplayFrameBuffer)
         else:
-            ReplayCls = (AsyncUniformReplayFrameBuffer if async_ else
-                UniformReplayFrameBuffer)
+            ReplayCls = self.replaybuffercls
+
         self.replay_buffer = ReplayCls(**replay_kwargs)
 
     def optimize_agent(self, itr, samples=None, sampler_itr=None):

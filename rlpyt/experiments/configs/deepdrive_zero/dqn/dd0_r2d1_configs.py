@@ -67,7 +67,7 @@ config = dict(
         batch_B=32,
         max_decorrelation_steps=1000,
         eval_n_envs=4,
-        eval_max_steps=int(161e3),
+        eval_max_steps=int(51e3),
         eval_max_trajectories=100,
     ),
 )

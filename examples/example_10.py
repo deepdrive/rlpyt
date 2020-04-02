@@ -13,6 +13,8 @@ from rlpyt.envs.gym import GymEnvWrapper
 from rlpyt.runners.async_rl import AsyncRlEval
 from rlpyt.utils.tensor import infer_leading_dims, restore_leading_dims
 from rlpyt.utils.wrappers import *
+from rlpyt.envs.gym import make as make_env
+from rlpyt.replays.base import BaseReplayBuffer
 
 import torch
 import torch.nn as nn
@@ -20,6 +22,7 @@ import torch.nn.functional as F
 
 import numpy as np
 import gym
+
 
 
 ############################# classes and functions #############################
@@ -67,7 +70,7 @@ class CustomDqnModel(torch.nn.Module):
 
 
 # class CustomDqnAgent(CustomMixin, DqnAgent):
-class CustomDqnAgent(CustomMixin, AtariDqnAgent):
+class CustomDqnAgent(CustomMixin, DqnAgent):
     def __init__(self, ModelCls=CustomDqnModel, **kwargs):
         super().__init__(ModelCls=ModelCls, **kwargs)
 
@@ -81,12 +84,12 @@ def make_env_custom(*args, **kwargs):
 def build_and_train(run_ID=0, cuda_idx=None):
     env_id = 'CartPole-v0'
 
-    sampler = SerialSampler(
-        EnvCls=make_env_custom,
+    sampler = CpuSampler(
+        EnvCls=make_env,
         env_kwargs=dict(id=env_id), #env_config,
         eval_env_kwargs=dict(id=env_id),  #env_config,
-        batch_T=1,  # One time-step per sampler iteration.
-        batch_B=1,  # One environment (i.e. sampler Batch dimension).
+        batch_T=4,  # One time-step per sampler iteration.
+        batch_B=8,  # One environment (i.e. sampler Batch dimension).
         max_decorrelation_steps=100,
         eval_n_envs=0,
         eval_max_steps=int(10e3),
@@ -94,13 +97,16 @@ def build_and_train(run_ID=0, cuda_idx=None):
     )
 
     algo = DQN(
-        learning_rate=1e-4,
-        replay_ratio=1,
-        min_steps_learn=40,
-        eps_steps=60000,
-        replay_size=int(1e4),
-        double_dqn=True,
-        target_update_interval=20,
+        learning_rate=1e-3,
+        replay_ratio=8,
+        batch_size=32,
+        min_steps_learn=32,
+        eps_steps=10e3,
+        replay_size=int(1e3),
+        # double_dqn=True,
+        # target_update_interval=1,
+        # prioritized_replay=True,
+        ReplayBufferCls=BaseReplayBuffer,
     )
 
     agent = CustomDqnAgent()
