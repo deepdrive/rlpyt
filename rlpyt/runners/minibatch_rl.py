@@ -323,6 +323,7 @@ class MinibatchRlEval(MinibatchRlBase):
                 self.store_diagnostics(itr, traj_infos, opt_info)
                 if (itr + 1) % self.log_interval_itrs == 0:
                     eval_traj_infos, eval_time = self.evaluate_agent(itr)
+                    #TODO: save best model
                     self.log_diagnostics(itr, eval_traj_infos, eval_time, sampling_eps)
         self.shutdown()
 

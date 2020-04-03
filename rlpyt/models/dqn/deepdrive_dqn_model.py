@@ -18,7 +18,7 @@ class DeepDriveDqnModel(torch.nn.Module):
             self,
             observation_shape,
             output_size,
-            fc_sizes=256,
+            fc_sizes=128,
             dueling=False,
             normalize_observation=False,
             norm_obs_clip=2,

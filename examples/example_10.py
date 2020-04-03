@@ -14,7 +14,8 @@ from rlpyt.runners.async_rl import AsyncRlEval
 from rlpyt.utils.tensor import infer_leading_dims, restore_leading_dims
 from rlpyt.utils.wrappers import *
 from rlpyt.envs.gym import make as make_env
-from rlpyt.replays.base import BaseReplayBuffer
+from rlpyt.replays.non_sequence.uniform import UniformReplayBuffer
+from rlpyt.envs.base import EnvSpaces
 
 import torch
 import torch.nn as nn
@@ -106,7 +107,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
         # double_dqn=True,
         # target_update_interval=1,
         # prioritized_replay=True,
-        ReplayBufferCls=BaseReplayBuffer,
+        ReplayBufferCls=UniformReplayBuffer,
     )
 
     agent = CustomDqnAgent()
@@ -115,9 +116,9 @@ def build_and_train(run_ID=0, cuda_idx=None):
         algo=algo,
         agent=agent,
         sampler=sampler,
-        n_steps=2e6,
+        n_steps=1e6,
         log_interval_steps=1e3,
-        affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0,1,2,4,5,6])
+        affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0, 1, 2, 4, 5, 6])
     )
 
     config = dict(env_id=env_id)
@@ -125,8 +126,44 @@ def build_and_train(run_ID=0, cuda_idx=None):
     name = algo_name + env_id
     log_dir = algo_name + env_id
 
-    with logger_context(log_dir, run_ID, name, config, snapshot_mode='last'):
+    with logger_context(log_dir, run_ID, name, config, snapshot_mode='all'):
         runner.train()
+
+
+def evaluate():
+    import time
+    pre_trained_model = '/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-02_22-22.48/dqn_CartPole-v0/run_0/itr_18103.pkl'
+    data = torch.load(pre_trained_model)
+    agent_state_dict = data['agent_state_dict']
+
+    # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
+    for i in range(100):
+        env = gym.make('CartPole-v0')
+
+        agent = CustomDqnAgent(initial_model_state_dict=agent_state_dict['model'])
+
+        env_spaces = EnvSpaces(
+                observation=env.observation_space,
+                action=env.action_space,
+        )
+        agent.initialize(env_spaces)
+        agent.load_state_dict(agent_state_dict['model'])
+
+        obs = env.reset()
+        tot_reward = 0
+        while True:
+            # action = agent.step(torch.tensor(obs, dtype=torch.float32), torch.tensor(0), torch.tensor(0))
+            action = agent.step(torch.tensor(obs, dtype=torch.float32), torch.tensor(0), torch.tensor(0))
+            a = np.array(action.action)
+            obs, reward, done, info = env.step(a)
+            tot_reward += reward
+            env.render()
+            # time.sleep(0.001)
+            if done:
+                break
+
+        print('reward: ', tot_reward)
+        env.close()
 
 
 if __name__ == "__main__":
@@ -137,7 +174,9 @@ if __name__ == "__main__":
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
     args = parser.parse_args()
 
-    build_and_train(
-        run_ID=args.run_ID,
-        cuda_idx=args.cuda_idx,
-    )
+    # build_and_train(
+    #     run_ID=args.run_ID,
+    #     cuda_idx=args.cuda_idx,
+    # )
+
+    evaluate()

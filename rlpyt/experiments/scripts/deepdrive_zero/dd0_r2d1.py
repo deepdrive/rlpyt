@@ -16,7 +16,7 @@ from rlpyt.experiments.configs.deepdrive_zero.dqn.dd0_r2d1_configs import config
 
 from rlpyt.envs.gym import GymEnvWrapper
 from rlpyt.envs.base import EnvSpaces
-from rlpyt.envs.gym import DeepDriveDiscretizeActionWrapper
+from rlpyt.utils.wrappers import DeepDriveDiscretizeActionWrapper
 
 
 import torch

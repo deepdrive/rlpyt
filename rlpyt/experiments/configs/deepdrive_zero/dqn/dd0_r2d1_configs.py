@@ -1,5 +1,6 @@
 
 import copy
+from rlpyt.replays.sequence.uniform import UniformSequenceReplayBuffer
 
 configs = dict()
 
@@ -23,6 +24,7 @@ config = dict(
         pri_alpha=0.9,  # Fixed on 20190813
         pri_beta_init=0.6,  # I think had these backwards before.
         pri_beta_final=0.6,
+        ReplayBufferCls=UniformSequenceReplayBuffer,
         input_priority_shift=2,  # Added 20190826 (used to default to 1)
     ),
     optim=dict(),

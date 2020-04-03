@@ -71,11 +71,10 @@ class DQN(RlAlgorithm):
         if default_priority is None:
             default_priority = delta_clip
         self._batch_size = batch_size
+        self.replaybuffercls = ReplayBufferCls
         del batch_size  # Property.
         save__init__args(locals())
         self.update_counter = 0
-
-        self.replaybuffercls = ReplayBufferCls
 
     def initialize(self, agent, n_itr, batch_spec, mid_batch_reset, examples,
             world_size=1, rank=0):
@@ -164,7 +163,7 @@ class DQN(RlAlgorithm):
         else:
             ReplayCls = self.replaybuffercls
 
-        self.replay_buffer = ReplayCls(**replay_kwargs)
+        self.replay_buffer = ReplayCls(**replay_kwargs) #UniformReplayBuffer(**replay_kwargs) #
 
     def optimize_agent(self, itr, samples=None, sampler_itr=None):
         """

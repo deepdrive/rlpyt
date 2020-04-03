@@ -327,8 +327,8 @@ class DeepDriveDiscretizeActionWrapper(gym.ActionWrapper, Env):
     """
     def __init__(self, env):
         super(DeepDriveDiscretizeActionWrapper, self).__init__(env)
-        discrete_steer = list(np.arange(-1, 1.01, 0.2)) #list(np.arange(-1, 1.01, 0.08))
-        discrete_acc   = [-1, 0.0, 0.5, 1.0]
+        discrete_steer = list(np.arange(-1.0, 1.01, 0.2)) #list(np.arange(-1, 1.01, 0.08))
+        discrete_acc   = [-1, 0.0, 1.0]
         # discrete_brake = list(np.arange(-1, 1.01, 1.))
         self.discrete_act = [discrete_steer, discrete_acc]  # acc, steer
         self.n_steer = len(self.discrete_act[0])
@@ -341,6 +341,7 @@ class DeepDriveDiscretizeActionWrapper(gym.ActionWrapper, Env):
         for s in discrete_steer:
             for a in discrete_acc:
                 # for b in discrete_brake:
+                # self.action_items.append([s, a, -a])
                 if a >= 0:
                     self.action_items.append([s, a, 0])
                 else:
@@ -356,23 +357,10 @@ class DeepDriveDiscretizeActionWrapper(gym.ActionWrapper, Env):
         #
         # **brake**
         # > From 0g at -1 to 1g at 1 of brake force
+        # [steer, accel, brake]
 
-        # steer = self.discrete_act[0][action % self.n_steer]
-        # acc = self.discrete_act[1][action // self.n_steer]
-        #
-        # if acc > 0:
-        #     accel = acc
-        #     brake = 0
-        # else:
-        #     accel = 0
-        #     brake = -acc
-        # act = np.array([steer, accel, brake])
-        # try:
         act = self.action_items[action]
         return self.env.step(act)
-        # except:
-        #     print('error: ', action)
-        #     return self.env.step([0,0,0])
 
 
 class ResizeFrame(gym.ObservationWrapper):

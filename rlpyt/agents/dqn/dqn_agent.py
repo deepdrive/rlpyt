@@ -67,22 +67,6 @@ class DqnAgent(EpsilonGreedyAgentMixin, BaseAgent):
         q = q.cpu()
         action = self.distribution.sample(q)
 
-        # logger.log(f"epsilon in agent-step func is: {self.distribution._epsilon}")
-
-        ## TODO: implement my own e-greedy
-        # epsilon_start = 1.0
-        # epsilon_final = 0.01
-        # epsilon_decay = 500
-        # self.frame_idx += 1
-        # epsilon_by_frame = lambda frame_idx: epsilon_final + (epsilon_start - epsilon_final) * math.exp(-1. * frame_idx / epsilon_decay)
-        # eps = epsilon_by_frame(self.frame_idx)
-        # if random.random() > eps:
-        #     action = q.max(1)[1].item()
-        # else:
-        #     action = random.randrange(self.env_spaces.action.n)
-
-        ##=====================================
-
         agent_info = AgentInfo(q=q)
         # action, agent_info = buffer_to((action, agent_info), device="cpu")
         return AgentStep(action=action, agent_info=agent_info)

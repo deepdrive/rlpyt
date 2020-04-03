@@ -24,7 +24,7 @@ def get_log_dir(experiment_name):
 def logger_context(
     log_dir, run_ID, name, log_params=None, snapshot_mode="none", override_prefix=False,
     use_summary_writer=False,
-):
+    ):
     """Use as context manager around calls to the runner's ``train()`` method.
     Sets up the logger directory and filenames.  Unless override_prefix is True,
     this function automatically prepends ``log_dir`` with the rlpyt logging 

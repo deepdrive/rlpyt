@@ -19,6 +19,7 @@ from rlpyt.utils.logging.context import logger_context
 from rlpyt.envs.gym import GymEnvWrapper
 from rlpyt.envs.base import EnvSpaces
 from rlpyt.samplers.serial.sampler import SerialSampler
+from rlpyt.utils.logging import logger
 
 import torch
 import numpy as np
@@ -97,18 +98,19 @@ def evaluate():
     env = Deepdrive2DEnv()
     env.configure_env(env_config)
 
-    agent = SacAgent()
+    agent = SacAgent(initial_model_state_dict=agent_state_dict)
     env_spaces = EnvSpaces(
             observation=env.observation_space,
             action=env.action_space,
     )
     agent.initialize(env_spaces)
-    agent.load_state_dict(agent_state_dict)
+    # agent.load_state_dict(agent_state_dict)
 
     obs = env.reset()
     while True:
         action = agent.step(torch.tensor(obs, dtype=torch.float32), None, None)
         a = np.array(action.action)
+        logger.log(f"action: {a}")
         obs, reward, done, info = env.step(a)
         env.render()
         if done:
@@ -125,10 +127,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    build_and_train(
-        run_ID=args.run_ID,
-        cuda_idx=args.cuda_idx,
-    )
+#     build_and_train(
+#         run_ID=args.run_ID,
+#         cuda_idx=args.cuda_idx,
+#     )
 
-    # evaluate()
+    evaluate()
 
