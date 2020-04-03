@@ -21,25 +21,6 @@ from rlpyt.envs.base import EnvSpaces
 import torch
 import numpy as np
 
-# env_config = dict(
-#     id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
-#     is_intersection_map=True,
-#     jerk_penalty_coeff=0.10,
-#     gforce_penalty_coeff=0.031,
-#     lane_penalty_coeff=0.02,
-#     collision_penalty_coeff=0.31,
-#     speed_reward_coeff=0.50,
-#     win_coefficient=1,
-#     end_on_harmful_gs=True,
-#     constrain_controls=True,
-#     ignore_brake=False,
-#     forbid_deceleration=False,
-#     expect_normalized_action_deltas=True,
-#     incent_win=True,
-#     dummy_accel_agent_indices=[1],
-#     wait_for_action=False,
-#     incent_yield_to_oncoming_traffic=True,
-# )
 
 env_config = dict(
     id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
@@ -53,8 +34,6 @@ env_config = dict(
     constrain_controls=False,
     dummy_accel_agent_indices=[1]
 )
-
-
 
 
 def make_env(*args, **kwargs):
@@ -76,7 +55,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
         eval_max_trajectories=50,
     )
 
-    # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
+
     algo = DDPG(
         batch_size=64,
         replay_size=100000,
@@ -89,7 +68,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
         agent=agent,
         sampler=sampler,
         n_steps=1e6,
-        log_interval_steps=1e3,
+        log_interval_steps=10,
         affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0,1,2,3,4,5,6]),
     )
 
@@ -101,8 +80,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
         runner.train()
 
 
-def evaluate():
-    pre_trained_model = '/home/isaac/codes/dd-zero/rlpyt/data/local/2020_03-23_20-18.59/dd2d/run_0/params.pkl'
+def evaluate(pre_trained_model):
     data = torch.load(pre_trained_model)
     agent_state_dict = data['agent_state_dict']
 
@@ -134,14 +112,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=0)
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
-    parser.add_argument('--no-timeout', help='consider timeout or not ', default=True)
-
+    parser.add_argument('--mode', help='train or eval', default='train')
+    parser.add_argument('--pre_trained_model',
+                        help='path to the pre-trained model.',
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_03-23_20-18.59/dd2d/run_0/params.pkl')
     args = parser.parse_args()
 
-    # build_and_train(
-    #     run_ID=args.run_ID,
-    #     cuda_idx=args.cuda_idx,
-    # )
-    #
-    evaluate()
+    if args.mode == 'train':
+        build_and_train(
+            run_ID=args.run_ID,
+            cuda_idx=args.cuda_idx
+        )
+    else:
+        evaluate(args.pre_trained_model)
 

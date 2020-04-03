@@ -21,16 +21,14 @@ class DeepDriveDqnAgent(DqnAgent):
         return dict(observation_shape=env_spaces.observation.shape,
                     output_size=env_spaces.action.n)
 
-    # @torch.no_grad()
-    # def step(self, observation, prev_action, prev_reward):
-    #     """Computes Q-values for states/observations and selects actions by
-    #     epsilon-greedy. (no grad)"""
-    #     # prev_action = self.distribution.to_onehot(prev_action)
-    #     model_inputs = buffer_to((observation, prev_action, prev_reward),
-    #                              device=self.device)
-    #     q = self.model(*model_inputs)
-    #     q = q.cpu()
-    #     action = self.distribution.sample(q)
-    #     agent_info = AgentInfo(q=q)
-    #     # action, agent_info = buffer_to((action, agent_info), device="cpu")
-    #     return AgentStep(action=action, agent_info=agent_info)
+    @torch.no_grad()
+    def eval_step(self, observation, prev_action, prev_reward):
+        """Computes Q-values for states/observations and selects actions by
+        epsilon-greedy. (no grad)"""
+        # prev_action = self.distribution.to_onehot(prev_action)
+        model_inputs = buffer_to((observation, prev_action, prev_reward),
+                                 device=self.device)
+        q = self.model(*model_inputs)
+        q = q.cpu()
+        action = torch.argmax(q)
+        return action

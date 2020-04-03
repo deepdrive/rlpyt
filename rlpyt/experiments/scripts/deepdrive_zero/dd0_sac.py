@@ -75,7 +75,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
         agent=agent,
         sampler=sampler,
         n_steps=1e6,
-        log_interval_steps=1e3,
+        log_interval_steps=10,
         affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0,1,2,3,4,5,6]),
     )
 
@@ -89,8 +89,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
         runner.train()
 
 
-def evaluate():
-    pre_trained_model = '/home/isaac/codes/dd-zero/rlpyt/data/local/2020_03-28_18-46.54/sac_ddzero/run_0/params.pkl'
+def evaluate(pre_trained_model):
     data = torch.load(pre_trained_model)
     agent_state_dict = data['agent_state_dict']
 
@@ -123,14 +122,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=0)
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
-    parser.add_argument('--no-timeout', help='consider timeout or not ', default=True)
+    parser.add_argument('--mode', help='train or eval', default='train')
+    parser.add_argument('--pre_trained_model',
+                        help='path to the pre-trained model.',
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_03-28_18-46.54/sac_ddzero/run_0/params.pkl')
 
     args = parser.parse_args()
 
-#     build_and_train(
-#         run_ID=args.run_ID,
-#         cuda_idx=args.cuda_idx,
-#     )
+    if args.mode == 'train':
+        build_and_train(
+            run_ID=args.run_ID,
+            cuda_idx=args.cuda_idx,
+        )
+    else:
+        evaluate(args.pre_trained_model)
 
-    evaluate()
 
