@@ -31,7 +31,7 @@ class DeepdriveR2d1Model(torch.nn.Module):
         self.normalize_observation=normalize_observation
         self.dueling = dueling
         input_shape = observation_shape[0]
-        self.mlp = MlpModel(input_shape, [128],
+        self.mlp = MlpModel(input_shape, [256],
                             output_size=fc_size,
                             nonlinearity=torch.nn.Tanh  # Match spinningup
                             )

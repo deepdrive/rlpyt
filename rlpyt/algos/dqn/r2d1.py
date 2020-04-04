@@ -10,6 +10,9 @@ from rlpyt.utils.collections import namedarraytuple
 from rlpyt.replays.sequence.frame import (UniformSequenceReplayFrameBuffer,
     PrioritizedSequenceReplayFrameBuffer, AsyncUniformSequenceReplayFrameBuffer,
     AsyncPrioritizedSequenceReplayFrameBuffer)
+from rlpyt.replays.sequence.prioritized import AsyncPrioritizedSequenceReplayBuffer, PrioritizedSequenceReplayBuffer
+from rlpyt.replays.sequence.uniform import AsyncUniformSequenceReplayBuffer, UniformSequenceReplayBuffer
+
 
 from rlpyt.utils.tensor import select_at_indexes, valid_mean
 from rlpyt.algos.utils import valid_from_done, discount_return_n_step
@@ -62,8 +65,9 @@ class R2D1(DQN):
             input_priorities=True,
             input_priority_shift=None,
             value_scale_eps=1e-3,  # 1e-3 (Steven).
-            ReplayBufferCls=None,
+            replay_buffer_class=None, # set None to select automatically
             updates_per_sync=1,  # For async mode only.
+            frame_state_space=True, # set True for atari-like games and False for envs like CartPole-v0
             ):
         """Saves input arguments.
 
@@ -82,7 +86,8 @@ class R2D1(DQN):
         if input_priority_shift is None:
             input_priority_shift = warmup_T // store_rnn_state_interval
 
-        self.replaybuffercls = ReplayBufferCls
+        # self.replaybuffercls = ReplayBufferCls
+        # self.frame_state_space = frame_state_space
 
         save__init__args(locals())
         self._batch_size = (self.batch_T + self.warmup_T) * self.batch_B
@@ -111,7 +116,7 @@ class R2D1(DQN):
             batch_T=self.batch_T + self.warmup_T,
         )
 
-        if self.replaybuffercls is None:
+        if self.replay_buffer_class is None:
             if self.prioritized_replay:
                 replay_kwargs.update(dict(
                     alpha=self.pri_alpha,
@@ -120,13 +125,21 @@ class R2D1(DQN):
                     input_priorities=self.input_priorities,  # True/False.
                     input_priority_shift=self.input_priority_shift,
                 ))
-                ReplayCls = (AsyncPrioritizedSequenceReplayFrameBuffer if async_
-                    else PrioritizedSequenceReplayFrameBuffer)
+                if self.frame_state_space: # if state space is fram -> like atari
+                    ReplayCls = (AsyncPrioritizedSequenceReplayFrameBuffer if async_
+                        else PrioritizedSequenceReplayFrameBuffer)
+                else: #non-frame state space -> vector state space
+                    ReplayCls = (AsyncPrioritizedSequenceReplayBuffer if async_
+                                 else PrioritizedSequenceReplayBuffer)
             else:
-                ReplayCls = (AsyncUniformSequenceReplayFrameBuffer if async_
-                    else UniformSequenceReplayFrameBuffer)
+                if self.frame_state_space:
+                    ReplayCls = (AsyncUniformSequenceReplayFrameBuffer if async_
+                        else UniformSequenceReplayFrameBuffer)
+                else:
+                    ReplayCls = (AsyncUniformSequenceReplayBuffer if async_
+                                 else UniformSequenceReplayBuffer)
         else:
-            ReplayCls = self.replaybuffercls
+            ReplayCls = self.replay_buffer_class
 
         self.replay_buffer = ReplayCls(**replay_kwargs)
         return self.replay_buffer

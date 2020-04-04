@@ -8,6 +8,8 @@ from rlpyt.utils.logging import logger
 from rlpyt.replays.non_sequence.frame import (UniformReplayFrameBuffer,
     PrioritizedReplayFrameBuffer, AsyncUniformReplayFrameBuffer,
     AsyncPrioritizedReplayFrameBuffer)
+from rlpyt.replays.non_sequence.uniform import UniformReplayBuffer, AsyncUniformReplayBuffer
+from rlpyt.replays.non_sequence.prioritized import PrioritizedReplayBuffer, AsyncPrioritizedReplayBuffer
 from rlpyt.replays.non_sequence.uniform import UniformReplayBuffer
 from rlpyt.utils.collections import namedarraytuple
 from rlpyt.utils.tensor import select_at_indexes, valid_mean
@@ -54,8 +56,9 @@ class DQN(RlAlgorithm):
             pri_beta_final=1.,
             pri_beta_steps=int(50e6),
             default_priority=None,
-            ReplayBufferCls=None,  # Leave None to select by above options.
+            replay_buffer_class=None,  # Leave None to select by above options.
             updates_per_sync=1,  # For async mode only.
+            frame_state_space=True,  # set True for atari-like games and False for envs like CartPole-v0
             ):
         """Saves input arguments.  
 
@@ -71,7 +74,6 @@ class DQN(RlAlgorithm):
         if default_priority is None:
             default_priority = delta_clip
         self._batch_size = batch_size
-        self.replaybuffercls = ReplayBufferCls
         del batch_size  # Property.
         save__init__args(locals())
         self.update_counter = 0
@@ -148,20 +150,28 @@ class DQN(RlAlgorithm):
             n_step_return=self.n_step_return,
         )
 
-        if self.replaybuffercls is None:
+        if self.replay_buffer_class is None:
             if self.prioritized_replay:
                 replay_kwargs.update(dict(
                     alpha=self.pri_alpha,
                     beta=self.pri_beta_init,
                     default_priority=self.default_priority,
                 ))
-                ReplayCls = (AsyncPrioritizedReplayFrameBuffer if async_ else
-                    PrioritizedReplayFrameBuffer)
+                if self.frame_state_space:
+                    ReplayCls = (AsyncPrioritizedReplayFrameBuffer if async_ else
+                        PrioritizedReplayFrameBuffer)
+                else:
+                    ReplayCls = (AsyncPrioritizedReplayBuffer if async_ else
+                                 PrioritizedReplayBuffer)
             else:
-                ReplayCls = (AsyncUniformReplayFrameBuffer if async_ else
-                    UniformReplayFrameBuffer)
+                if self.frame_state_space:
+                    ReplayCls = (AsyncUniformReplayFrameBuffer if async_ else
+                        UniformReplayFrameBuffer)
+                else:
+                    ReplayCls = (AsyncUniformReplayBuffer if async_ else
+                                 UniformReplayBuffer)
         else:
-            ReplayCls = self.replaybuffercls
+            ReplayCls = self.replay_buffer_class
 
         self.replay_buffer = ReplayCls(**replay_kwargs) #UniformReplayBuffer(**replay_kwargs) #
 
