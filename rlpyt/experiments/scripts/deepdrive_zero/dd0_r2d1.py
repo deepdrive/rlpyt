@@ -42,6 +42,7 @@ def build_and_train(run_ID=0):
     name = algo_name + config['env']['id']
     log_dir = algo_name + "dd0"
 
+    # TODO: doesn't work with CpuSampler. Check why?
     sampler = GpuSampler(
         EnvCls=make_env,
         env_kwargs=config['env'],
@@ -99,7 +100,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--mode', help='train or eval', default='eval')
+    parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
                         default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-03_22-27.20/r2d1_dd0/run_0/params.pkl'

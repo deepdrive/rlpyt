@@ -16,6 +16,7 @@ from rlpyt.utils.wrappers import *
 from rlpyt.envs.gym import make as make_env
 from rlpyt.replays.non_sequence.uniform import UniformReplayBuffer
 from rlpyt.envs.base import EnvSpaces
+from rlpyt.utils.buffer import buffer_to
 
 import torch
 import torch.nn as nn
@@ -75,6 +76,18 @@ class CustomDqnAgent(CustomMixin, DqnAgent):
     def __init__(self, ModelCls=CustomDqnModel, **kwargs):
         super().__init__(ModelCls=ModelCls, **kwargs)
 
+    @torch.no_grad()
+    def eval_step(self, observation, prev_action, prev_reward):
+        """Computes Q-values for states/observations and selects actions by
+        epsilon-greedy. (no grad)"""
+        # prev_action = self.distribution.to_onehot(prev_action)
+        model_inputs = buffer_to((observation, prev_action, prev_reward),
+                                 device=self.device)
+        q = self.model(*model_inputs)
+        q = q.cpu()
+        action = torch.argmax(q)
+        return action
+
 
 def make_env_custom(*args, **kwargs):
     env = gym.make('CartPole-v0')
@@ -92,7 +105,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
         batch_T=4,  # One time-step per sampler iteration.
         batch_B=8,  # One environment (i.e. sampler Batch dimension).
         max_decorrelation_steps=100,
-        eval_n_envs=0,
+        eval_n_envs=2,
         eval_max_steps=int(10e3),
         eval_max_trajectories=4,
     )
@@ -117,7 +130,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
         agent=agent,
         sampler=sampler,
         n_steps=1e6,
-        log_interval_steps=1e3,
+        log_interval_steps=1e2,
         affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0, 1, 2, 4, 5, 6])
     )
 
@@ -126,44 +139,44 @@ def build_and_train(run_ID=0, cuda_idx=None):
     name = algo_name + env_id
     log_dir = algo_name + env_id
 
-    with logger_context(log_dir, run_ID, name, config, snapshot_mode='all'):
+    with logger_context(log_dir, run_ID, name, config, snapshot_mode='last'):
         runner.train()
 
 
 def evaluate():
     import time
-    pre_trained_model = '/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-02_22-22.48/dqn_CartPole-v0/run_0/itr_18103.pkl'
+    pre_trained_model = '/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-04_06-52.20/dqn_CartPole-v0/run_0/itr_24713.pkl'
     data = torch.load(pre_trained_model)
     agent_state_dict = data['agent_state_dict']
 
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
-    for i in range(100):
-        env = gym.make('CartPole-v0')
 
-        agent = CustomDqnAgent(initial_model_state_dict=agent_state_dict['model'])
+    env = gym.make('CartPole-v0')
 
-        env_spaces = EnvSpaces(
-                observation=env.observation_space,
-                action=env.action_space,
-        )
-        agent.initialize(env_spaces)
-        agent.load_state_dict(agent_state_dict['model'])
+    agent = CustomDqnAgent(initial_model_state_dict=agent_state_dict['model'])
 
-        obs = env.reset()
-        tot_reward = 0
-        while True:
-            # action = agent.step(torch.tensor(obs, dtype=torch.float32), torch.tensor(0), torch.tensor(0))
-            action = agent.step(torch.tensor(obs, dtype=torch.float32), torch.tensor(0), torch.tensor(0))
-            a = np.array(action.action)
-            obs, reward, done, info = env.step(a)
-            tot_reward += reward
-            env.render()
-            # time.sleep(0.001)
-            if done:
-                break
+    env_spaces = EnvSpaces(
+            observation=env.observation_space,
+            action=env.action_space,
+    )
+    agent.initialize(env_spaces)
+    agent.load_state_dict(agent_state_dict['model'])
 
-        print('reward: ', tot_reward)
-        env.close()
+    obs = env.reset()
+    tot_reward = 0
+    while True:
+        # action = agent.step(torch.tensor(obs, dtype=torch.float32), torch.tensor(0), torch.tensor(0))
+        action = agent.eval_step(torch.tensor(obs, dtype=torch.float32), None, None)
+        a = np.array(action)
+        obs, reward, done, info = env.step(a)
+        tot_reward += reward
+        env.render()
+        time.sleep(0.001)
+        if done:
+            break
+
+    print('reward: ', tot_reward)
+    env.close()
 
 
 if __name__ == "__main__":
@@ -172,11 +185,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=0)
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
+    parser.add_argument('--mode', help='train or eval', default='eval')
+
     args = parser.parse_args()
 
-    # build_and_train(
-    #     run_ID=args.run_ID,
-    #     cuda_idx=args.cuda_idx,
-    # )
-
-    evaluate()
+    if args.mode == 'train':
+        build_and_train(
+            run_ID=args.run_ID,
+            cuda_idx=args.cuda_idx,
+        )
+    else:
+        evaluate()

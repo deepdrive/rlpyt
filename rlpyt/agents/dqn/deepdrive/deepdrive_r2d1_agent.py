@@ -15,24 +15,12 @@ class DeepDriveR2d1Agent(R2d1Agent):
         return dict(observation_shape=env_spaces.observation.shape,
                     output_size=env_spaces.action.n)
 
-    # @torch.no_grad()
-    # def eval_step(self, observation, prev_action, prev_reward):
-    #     """Computes Q-values for states/observations and selects actions by
-    #     epsilon-greedy. (no grad)"""
-    #     # prev_action = self.distribution.to_onehot(prev_action)
-    #     model_inputs = buffer_to((observation, prev_action, prev_reward),
-    #                              device=self.device)
-    #     q = self.model(*model_inputs)
-    #     q = q.cpu()
-    #     action = torch.argmax(q)
-    #     return action
-
     @torch.no_grad()
     def eval_step(self, observation, prev_action, prev_reward):
         """Computes Q-values for states/observations and selects actions by
         epsilon-greedy (no grad).  Advances RNN state."""
         prev_action = self.distribution.to_onehot(prev_action)
-        prev_reward = prev_reward.float()
+        prev_reward = prev_reward.float() #model expects float tensor
         agent_inputs = buffer_to((observation, prev_action, prev_reward),
                                  device=self.device)
         q, rnn_state = self.model(*agent_inputs, self.prev_rnn_state)  # Model handles None.

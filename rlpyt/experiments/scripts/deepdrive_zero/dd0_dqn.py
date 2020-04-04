@@ -150,6 +150,21 @@ def evaluate(pre_trained_model):
             obs = env.reset()
 
 
+def test():
+    env = Deepdrive2DEnv()
+    env.configure_env(env_config)
+    # env = DeepDriveDiscretizeActionWrapper(env)
+
+    obs = env.reset()
+    while True:
+        a = np.array([0, 1, -1])
+        obs, reward, done, info = env.step(a)
+        env.render()
+        if done:
+            obs = env.reset()
+
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -171,3 +186,5 @@ if __name__ == "__main__":
         )
     else:
         evaluate(args.pre_trained_model)
+
+    # test()
