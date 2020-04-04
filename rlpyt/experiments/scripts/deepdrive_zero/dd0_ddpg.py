@@ -24,7 +24,6 @@ import numpy as np
 
 env_config = dict(
     id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
-    # id = 'deepdrive-2d-v0',
     is_intersection_map=True,
     expect_normalized_action_deltas=False,
     jerk_penalty_coeff=0.1,

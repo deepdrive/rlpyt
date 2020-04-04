@@ -30,7 +30,6 @@ from rlpyt.utils.logging import logger
 
 import torch
 import numpy as np
-import gym
 
 
 env_config = dict(
@@ -153,8 +152,6 @@ def evaluate(pre_trained_model):
 def test():
     env = Deepdrive2DEnv()
     env.configure_env(env_config)
-    # env = DeepDriveDiscretizeActionWrapper(env)
-
     obs = env.reset()
     while True:
         a = np.array([0, 1, -1])

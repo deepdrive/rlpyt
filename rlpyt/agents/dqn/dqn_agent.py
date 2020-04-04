@@ -3,8 +3,6 @@ import torch
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.nn.parallel import DistributedDataParallelCPU as DDPC
 
-import math
-import random
 
 from rlpyt.agents.base import BaseAgent, AgentStep
 from rlpyt.agents.dqn.epsilon_greedy import EpsilonGreedyAgentMixin
@@ -45,7 +43,6 @@ class DqnAgent(EpsilonGreedyAgentMixin, BaseAgent):
         if env_ranks is not None:
             self.make_vec_eps(global_B, env_ranks)
 
-        ##
         self.env_spaces = env_spaces
 
     def to_device(self, cuda_idx=None):

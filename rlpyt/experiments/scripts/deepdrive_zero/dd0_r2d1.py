@@ -1,24 +1,15 @@
-import sys
-
 from deepdrive_zero.envs.env import Deepdrive2DEnv
-
-from rlpyt.utils.launching.affinity import affinity_from_code
 from rlpyt.samplers.parallel.gpu.sampler import GpuSampler
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.samplers.parallel.gpu.collectors import GpuWaitResetCollector
-
 from rlpyt.algos.dqn.r2d1 import R2D1
 from rlpyt.agents.dqn.deepdrive.deepdrive_r2d1_agent import DeepDriveR2d1Agent
 from rlpyt.runners.minibatch_rl import MinibatchRlEval
 from rlpyt.utils.logging.context import logger_context
-from rlpyt.utils.launching.variant import load_variant, update_config
-
 from rlpyt.experiments.configs.deepdrive_zero.dqn.dd0_r2d1_configs import configs
-
 from rlpyt.envs.gym import GymEnvWrapper
 from rlpyt.envs.base import EnvSpaces
 from rlpyt.utils.wrappers import DeepDriveDiscretizeActionWrapper
-
 
 import torch
 import numpy as np
@@ -95,15 +86,14 @@ def evaluate(pre_trained_model):
             obs = env.reset()
 
 
-
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--mode', help='train or eval', default='train')
+    parser.add_argument('--mode', help='train or eval', default='eval')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-04_17-40.13/r2d1_dd0/run_0/params.pkl'
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-04_21-27.27/r2d1_dd0/run_0/params.pkl'
                         )
 
     args = parser.parse_args()
