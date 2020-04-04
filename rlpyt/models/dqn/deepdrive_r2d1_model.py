@@ -3,7 +3,6 @@ import torch
 
 from rlpyt.utils.tensor import infer_leading_dims, restore_leading_dims
 from rlpyt.utils.collections import namedarraytuple
-from rlpyt.models.conv2d import Conv2dHeadModel
 from rlpyt.models.mlp import MlpModel
 from rlpyt.models.dqn.dueling import DuelingHeadModel
 
@@ -19,19 +18,20 @@ class DeepdriveR2d1Model(torch.nn.Module):
             self,
             observation_shape,
             output_size,
-            fc_size=512,  # Between mlp and lstm.
-            lstm_size=512,
-            head_size=256,
+            fc_size=128,  # Between mlp and lstm.
+            lstm_size=128,
+            head_size=128,
             dueling=False,
             normalize_observation=False
             ):
         """Instantiates the neural network according to arguments; network defaults
         stored within this method."""
         super().__init__()
-        self._obs_n_dim = 1#len(observation_shape)
+        self._obs_n_dim = len(observation_shape)
         self.normalize_observation=normalize_observation
         self.dueling = dueling
-        self.mlp = MlpModel(observation_shape, [256],
+        input_shape = observation_shape[0]
+        self.mlp = MlpModel(input_shape, [128],
                             output_size=fc_size,
                             nonlinearity=torch.nn.Tanh  # Match spinningup
                             )
@@ -47,7 +47,7 @@ class DeepdriveR2d1Model(torch.nn.Module):
         obz = observation.type(torch.float)  # Expect torch.uint8 inputs
 
         # Infer (presence of) leading dimensions: [T,B], [B], or [].
-        lead_dim, T, B, _ = infer_leading_dims(observation, self._obs_n_dim)
+        lead_dim, T, B, _ = infer_leading_dims(obz, self._obs_n_dim)
 
         if self.normalize_observation:
             obs_var = self.obs_rms.var

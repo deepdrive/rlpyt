@@ -1,31 +1,37 @@
 
 import copy
 from rlpyt.replays.sequence.uniform import UniformSequenceReplayBuffer
+from rlpyt.replays.sequence.n_step import SequenceNStepReturnBuffer
+from rlpyt.replays.sequence.prioritized import PrioritizedSequenceReplayBuffer
 
 configs = dict()
 
 
 config = dict(
     agent=dict(),
-    model=dict(dueling=False, observation_shape=14, output_size=22),
+    model=dict(),
     algo=dict(
         discount=0.997,
         batch_T=80,
         batch_B=32,  # In the paper, 64.
         warmup_T=40,
         store_rnn_state_interval=40,
-        replay_ratio=4,  # In the paper, more like 0.8.
-        learning_rate=1e-4,
-        clip_grad_norm=80.,  # 80 (Steven.)
-        min_steps_learn=int(1e5),
+        replay_ratio=8,  # In the paper, more like 0.8.
+        replay_size=int(5e4),
+        learning_rate=5e-4,
+        clip_grad_norm=10.,  # 80 (Steven.)
+        min_steps_learn=int(5e3),
+        eps_steps=int(1e3),
+        target_update_interval=100,
         double_dqn=True,
-        prioritized_replay=True,
-        n_step_return=5,
+        prioritized_replay=False,
+        input_priorities=False, ## True
+        n_step_return=1,
         pri_alpha=0.9,  # Fixed on 20190813
         pri_beta_init=0.6,  # I think had these backwards before.
         pri_beta_final=0.6,
         ReplayBufferCls=UniformSequenceReplayBuffer,
-        input_priority_shift=2,  # Added 20190826 (used to default to 1)
+        input_priority_shift=1,  # Added 20190826 (used to default to 1)
     ),
     optim=dict(),
     env = dict(
@@ -61,8 +67,8 @@ config = dict(
         physics_steps_per_observation=6,
     ),
     runner=dict(
-        n_steps=100e6,
-        log_interval_steps=1e6,
+        n_steps=10e6,
+        log_interval_steps=1e1,
     ),
     sampler=dict(
         batch_T=30,  # Match the algo / replay_ratio.

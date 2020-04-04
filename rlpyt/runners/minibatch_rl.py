@@ -256,11 +256,11 @@ class MinibatchRl(MinibatchRlBase):
                 self.agent.sample_mode(itr)  # Might not be this agent sampling.
                 samples, traj_infos = self.sampler.obtain_samples(itr)
                 self.agent.train_mode(itr)
-                sampling_eps = self.agent.distribution._epsilon
+                # sampling_eps = self.agent.distribution._epsilon
                 opt_info = self.algo.optimize_agent(itr, samples)
                 self.store_diagnostics(itr, traj_infos, opt_info)
                 if (itr + 1) % self.log_interval_itrs == 0:
-                    self.log_diagnostics(itr, sampling_eps)
+                    self.log_diagnostics(itr)
 
                 # logger.log(f"epsilon value: {self.agent.distribution._epsilon}")
 
@@ -278,16 +278,16 @@ class MinibatchRl(MinibatchRlBase):
         self._traj_infos.extend(traj_infos)
         super().store_diagnostics(itr, traj_infos, opt_info)
 
-    def log_diagnostics(self, itr, sampling_eps):
+    def log_diagnostics(self, itr):
         logger.record_tabular('NewCompletedTrajs', self._new_completed_trajs)
         logger.record_tabular('StepsInTrajWindow',
             sum(info["Length"] for info in self._traj_infos))
 
         ## TODO: log epsilon for dqn agents
-        try:
-            logger.record_tabular('Epsilon', sampling_eps)
-        except:
-            pass
+        # try:
+        #     logger.record_tabular('Epsilon', sampling_eps)
+        # except:
+        #     pass
 
         super().log_diagnostics(itr)
         self._new_completed_trajs = 0
@@ -311,20 +311,20 @@ class MinibatchRlEval(MinibatchRlBase):
         n_itr = self.startup()
         with logger.prefix(f"itr #0 "):
             eval_traj_infos, eval_time = self.evaluate_agent(0)
-            self.log_diagnostics(0, eval_traj_infos, eval_time, sampling_eps=1.0)
+            self.log_diagnostics(0, eval_traj_infos, eval_time)
         for itr in range(n_itr):
             logger.set_iteration(itr)
             with logger.prefix(f"itr #{itr} "):
                 self.agent.sample_mode(itr)
                 samples, traj_infos = self.sampler.obtain_samples(itr)
                 self.agent.train_mode(itr)
-                sampling_eps = self.agent.distribution._epsilon
+                # sampling_eps = self.agent.distribution._epsilon
                 opt_info = self.algo.optimize_agent(itr, samples)
                 self.store_diagnostics(itr, traj_infos, opt_info)
                 if (itr + 1) % self.log_interval_itrs == 0:
                     eval_traj_infos, eval_time = self.evaluate_agent(itr)
                     #TODO: save best model
-                    self.log_diagnostics(itr, eval_traj_infos, eval_time, sampling_eps)
+                    self.log_diagnostics(itr, eval_traj_infos, eval_time)
         self.shutdown()
 
     def evaluate_agent(self, itr):
@@ -350,7 +350,7 @@ class MinibatchRlEval(MinibatchRlBase):
         super().initialize_logging()
         self._cum_eval_time = 0
 
-    def log_diagnostics(self, itr, eval_traj_infos, eval_time, sampling_eps):
+    def log_diagnostics(self, itr, eval_traj_infos, eval_time):
         if not eval_traj_infos:
             logger.log("WARNING: had no complete trajectories in eval.")
         steps_in_eval = sum([info["Length"] for info in eval_traj_infos])
@@ -360,9 +360,9 @@ class MinibatchRlEval(MinibatchRlBase):
         logger.record_tabular('CumEvalTime', self._cum_eval_time)
 
         ## TODO: log epsilon for dqn agents
-        try:
-            logger.record_tabular('Epsilon', sampling_eps)
-        except:
-            pass
+        # try:
+        #     logger.record_tabular('Epsilon', sampling_eps)
+        # except:
+        #     pass
 
         super().log_diagnostics(itr, eval_traj_infos, eval_time)

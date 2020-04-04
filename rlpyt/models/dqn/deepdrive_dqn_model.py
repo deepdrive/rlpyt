@@ -18,7 +18,7 @@ class DeepDriveDqnModel(torch.nn.Module):
             self,
             observation_shape,
             output_size,
-            fc_sizes=128,
+            fc_sizes=[128, 128],
             dueling=False,
             normalize_observation=False,
             norm_obs_clip=2,
@@ -32,11 +32,11 @@ class DeepDriveDqnModel(torch.nn.Module):
         input_shape = observation_shape[0]
 
         self.base_net = torch.nn.Sequential(
-            torch.nn.Linear(input_shape, fc_sizes),
+            torch.nn.Linear(input_shape, fc_sizes[0]),
             torch.nn.ReLU(),
-            torch.nn.Linear(fc_sizes, fc_sizes),
+            torch.nn.Linear(fc_sizes[0], fc_sizes[1]),
             torch.nn.ReLU(),
-            torch.nn.Linear(fc_sizes, output_size),
+            torch.nn.Linear(fc_sizes[1], output_size),
         )
         # self.base_net.apply(self.init_weights)
 

@@ -70,7 +70,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
         batch_T=32,  # One time-step per sampler iteration.
         batch_B=64,  # One environment (i.e. sampler Batch dimension).
         max_decorrelation_steps=0,
-        eval_n_envs=0,
+        eval_n_envs=2,
         eval_max_steps=int(51e3),
         eval_max_trajectories=50,
     )
@@ -106,11 +106,11 @@ def build_and_train(run_ID=0, cuda_idx=None):
         initial_model_state_dict=agent_state_dict
     )
 
-    runner = MinibatchRl(
+    runner = MinibatchRlEval(
         algo=algo,
         agent=agent,
         sampler=sampler,
-        n_steps=1e6,
+        n_steps=2e6,
         log_interval_steps=1,
         affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0, 1, 2, 3, 4, 5, 6])
     )
@@ -159,7 +159,8 @@ if __name__ == "__main__":
     parser.add_argument('--mode', help='train or eval', default='eval')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-03_09-43.06/dqn_dd0/run_0/params.pkl')
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-03_11-26.59/dqn_dd0/run_0/params.pkl'
+                        )
 
     args = parser.parse_args()
 
