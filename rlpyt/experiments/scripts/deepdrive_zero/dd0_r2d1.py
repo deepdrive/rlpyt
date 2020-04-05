@@ -90,7 +90,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--mode', help='train or eval', default='eval')
+    parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
                         default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-04_21-27.27/r2d1_dd0/run_0/params.pkl'

@@ -47,7 +47,8 @@ env_config = dict(
     end_on_harmful_gs=False,
     incent_win=True,
     constrain_controls=False,
-    physics_steps_per_observation=6,
+    physics_steps_per_observation=12,
+    dummy_accel_agent_indices=[1],
 )
 
 

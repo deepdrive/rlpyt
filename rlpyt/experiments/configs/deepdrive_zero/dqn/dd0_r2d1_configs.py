@@ -6,7 +6,6 @@ from rlpyt.replays.sequence.prioritized import PrioritizedSequenceReplayBuffer
 
 configs = dict()
 
-
 config = dict(
     agent=dict(),
     model=dict(),
@@ -43,7 +42,7 @@ config = dict(
         expect_normalized_action_deltas=False,
         jerk_penalty_coeff=3.3e-6,
         gforce_penalty_coeff=0.006,
-        lane_penalty_coeff=0.02,
+        lane_penalty_coeff=0.1, #0.02,
         collision_penalty_coeff=4,
         speed_reward_coeff=0.50,
         end_on_harmful_gs=False,
@@ -51,6 +50,7 @@ config = dict(
         incent_yield_to_oncoming_traffic=True,
         constrain_controls=False,
         physics_steps_per_observation=12,
+        dummy_accel_agent_indices=[1],
     ),
     eval_env=dict(
         id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
@@ -68,6 +68,7 @@ config = dict(
         incent_yield_to_oncoming_traffic=True,
         constrain_controls=False,
         physics_steps_per_observation=12,
+        dummy_accel_agent_indices=[1],
     ),
     runner=dict(
         n_steps=10e6,
