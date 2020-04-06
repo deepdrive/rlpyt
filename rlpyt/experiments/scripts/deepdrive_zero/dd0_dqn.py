@@ -151,8 +151,28 @@ def evaluate(pre_trained_model):
 
 
 def test():
+    env_config = dict(
+        id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
+        # id='deepdrive-2d-one-waypoint-v0',
+        is_intersection_map=True,
+        is_one_waypoint_map=False,
+        expect_normalized_actions=True,
+        expect_normalized_action_deltas=False,
+        jerk_penalty_coeff=0.0,
+        gforce_penalty_coeff=0.0,
+        lane_penalty_coeff=0.02,  # 0.02
+        collision_penalty_coeff=0.31,
+        speed_reward_coeff=0.50,
+        end_on_harmful_gs=False,
+        incent_win=True,
+        constrain_controls=False,
+        physics_steps_per_observation=12,
+        dummy_accel_agent_indices=[1],
+    )
+    # env = Deepdrive2DEnv(is_intersection_map=env_config['is_intersection_map'])
     env = Deepdrive2DEnv()
     env.configure_env(env_config)
+
     obs = env.reset()
     while True:
         a = np.array([0, 1, -1])
@@ -160,7 +180,6 @@ def test():
         env.render()
         if done:
             obs = env.reset()
-
 
 
 if __name__ == "__main__":
@@ -177,12 +196,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.mode == 'train':
-        build_and_train(
-            run_ID=args.run_ID,
-            cuda_idx=args.cuda_idx,
-        )
-    else:
-        evaluate(args.pre_trained_model)
+    # if args.mode == 'train':
+    #     build_and_train(
+    #         run_ID=args.run_ID,
+    #         cuda_idx=args.cuda_idx,
+    #     )
+    # else:
+    #     evaluate(args.pre_trained_model)
 
-    # test()
+    test()

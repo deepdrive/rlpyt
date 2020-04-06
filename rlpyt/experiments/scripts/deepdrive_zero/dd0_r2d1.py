@@ -13,10 +13,10 @@ from rlpyt.utils.wrappers import DeepDriveDiscretizeActionWrapper
 
 import torch
 import numpy as np
-
+import gym
 
 def make_env(*args, **kwargs):
-    env = Deepdrive2DEnv()
+    env = Deepdrive2DEnv(is_intersection_map=kwargs['is_intersection_map'])
     env.configure_env(kwargs)
     env = DeepDriveDiscretizeActionWrapper(env)
     env = GymEnvWrapper(env)
@@ -65,7 +65,7 @@ def evaluate(pre_trained_model):
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
     config = configs['r2d1']
     env_config = config['eval_env']
-    env = Deepdrive2DEnv()
+    env = Deepdrive2DEnv(is_intersection_map=env_config['is_intersection_map'])
     env.configure_env(env_config)
     env = DeepDriveDiscretizeActionWrapper(env)
 
@@ -77,10 +77,16 @@ def evaluate(pre_trained_model):
     agent.initialize(env_spaces)
 
     obs = env.reset()
+    prev_action = torch.tensor(0) #None
+    prev_reward = torch.tensor(0) #None
     while True:
-        action = agent.eval_step(torch.tensor(obs, dtype=torch.float32), torch.tensor(0), torch.tensor(0))
-        a = np.array(action)
-        obs, reward, done, info = env.step(a)
+        #TODO: feed prev_action and reward for eval_step()
+        #TODO: do we need warm-up for evaluation too?
+        action = agent.eval_step(torch.tensor(obs, dtype=torch.float32), prev_action, prev_reward)
+        action = np.array(action.action)
+        obs, reward, done, info = env.step(action)
+        prev_action = action
+        prev_reward = reward
         env.render()
         if done:
             obs = env.reset()
@@ -90,10 +96,10 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--mode', help='train or eval', default='train')
+    parser.add_argument('--mode', help='train or eval', default='eval')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-04_21-27.27/r2d1_dd0/run_0/params.pkl'
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-05_08-01.43/r2d1_dd0/run_0/params.pkl'
                         )
 
     args = parser.parse_args()

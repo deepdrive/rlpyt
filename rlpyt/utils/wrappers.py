@@ -1,12 +1,13 @@
 from rlpyt.envs.base import Env
 from rlpyt.envs.gym import IntBox
+import gym
 
 class DeepDriveDiscretizeActionWrapper(gym.ActionWrapper, Env):
     """ Discretizes the action space of deepdrive_zero env.
     """
     def __init__(self, env):
         super(DeepDriveDiscretizeActionWrapper, self).__init__(env)
-        discrete_steer = [-.3, -.2, -.1, 0, 0.1, .2, 0.3] #list(np.arange(-0.45, 0.451, 0.15)) #list(np.arange(-1, 1.01, 0.08))
+        discrete_steer = [-.3, -.2, -.1, 0, 0.1, .2, .3] #list(np.arange(-0.45, 0.451, 0.15)) #list(np.arange(-1, 1.01, 0.08))
         discrete_acc   = [-1, 1]
         # discrete_brake = [-1, 0, 1]
         self.discrete_act = [discrete_steer, discrete_acc]  # acc, steer

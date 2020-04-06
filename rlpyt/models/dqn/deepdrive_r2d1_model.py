@@ -41,7 +41,7 @@ class DeepdriveR2d1Model(torch.nn.Module):
         self.mlp = MlpModel(input_size=input_shape,
                             hidden_sizes=[256],
                             output_size=fc_size,
-                            nonlinearity=torch.nn.Tanh  # Match spinningup
+                            nonlinearity=torch.nn.ReLU  # Match spinningup
                             )
         self.lstm = torch.nn.LSTM(fc_size + output_size + 1, lstm_size)
         if dueling:

@@ -50,7 +50,7 @@ config = dict(
         incent_yield_to_oncoming_traffic=True,
         constrain_controls=False,
         physics_steps_per_observation=12,
-        dummy_accel_agent_indices=[1],
+        # dummy_accel_agent_indices=[1],
     ),
     eval_env=dict(
         id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
@@ -68,7 +68,7 @@ config = dict(
         incent_yield_to_oncoming_traffic=True,
         constrain_controls=False,
         physics_steps_per_observation=12,
-        dummy_accel_agent_indices=[1],
+        # dummy_accel_agent_indices=[1],
     ),
     runner=dict(
         n_steps=10e6,
