@@ -24,7 +24,7 @@ class DeepDriveR2d1Agent(R2d1Agent):
         """Computes Q-values for states/observations and selects actions by
         epsilon-greedy (no grad).  Advances RNN state."""
         prev_action = self.distribution.to_onehot(prev_action)
-        prev_reward = prev_reward.float() #model expects float tensor
+        # prev_reward = prev_reward.float() #model expects float tensor
         agent_inputs = buffer_to((observation, prev_action, prev_reward),
                                  device=self.device)
         q, rnn_state = self.model(*agent_inputs, self.prev_rnn_state)  # Model handles None.

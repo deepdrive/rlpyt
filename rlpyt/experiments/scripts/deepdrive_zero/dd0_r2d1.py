@@ -16,14 +16,24 @@ import numpy as np
 import gym
 
 def make_env(*args, **kwargs):
-    env = Deepdrive2DEnv(is_intersection_map=kwargs['is_intersection_map'])
+    env = Deepdrive2DEnv()
     env.configure_env(kwargs)
     env = DeepDriveDiscretizeActionWrapper(env)
     env = GymEnvWrapper(env)
     return env
 
 
-def build_and_train(run_ID=0):
+def build_and_train(pre_trained_model=None, run_ID=0):
+    # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
+    if pre_trained_model is not None:
+        print('Continue from previous checkpoint ...')
+        data = torch.load(pre_trained_model)
+        agent_state_dict = data['agent_state_dict']['model']
+        optimizer_state_dict = data['optimizer_state_dict']
+    else:
+        print('start training from scratch ...')
+        agent_state_dict = None
+        optimizer_state_dict = None
 
     affinity = dict(cuda_idx=0, workers_cpus=[0,1,2,3,4,5,6])
     config = configs['r2d1']
@@ -42,9 +52,15 @@ def build_and_train(run_ID=0):
         **config["sampler"]
     )
 
-    algo = R2D1(optim_kwargs=config["optim"], **config["algo"])
+    algo = R2D1(
+        optim_kwargs=config["optim"],
+        **config["algo"]
+    )
 
-    agent = DeepDriveR2d1Agent(**config["agent"])
+    agent = DeepDriveR2d1Agent(
+        initial_model_state_dict=agent_state_dict,
+        **config["agent"]
+    )
 
     runner = MinibatchRlEval(
         algo=algo,
@@ -65,7 +81,7 @@ def evaluate(pre_trained_model):
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
     config = configs['r2d1']
     env_config = config['eval_env']
-    env = Deepdrive2DEnv(is_intersection_map=env_config['is_intersection_map'])
+    env = Deepdrive2DEnv()
     env.configure_env(env_config)
     env = DeepDriveDiscretizeActionWrapper(env)
 
@@ -77,16 +93,16 @@ def evaluate(pre_trained_model):
     agent.initialize(env_spaces)
 
     obs = env.reset()
-    prev_action = torch.tensor(0) #None
-    prev_reward = torch.tensor(0) #None
+    prev_action = torch.tensor(0.0, dtype=torch.float) #None
+    prev_reward = torch.tensor(0.0, dtype=torch.float) #None
     while True:
         #TODO: feed prev_action and reward for eval_step()
         #TODO: do we need warm-up for evaluation too?
         action = agent.eval_step(torch.tensor(obs, dtype=torch.float32), prev_action, prev_reward)
         action = np.array(action.action)
         obs, reward, done, info = env.step(action)
-        prev_action = action
-        prev_reward = reward
+        prev_action = torch.tensor(action, dtype=torch.float)
+        prev_reward = torch.tensor(reward, dtype=torch.float)
         env.render()
         if done:
             obs = env.reset()
@@ -96,16 +112,16 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--mode', help='train or eval', default='eval')
+    parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-05_08-01.43/r2d1_dd0/run_0/params.pkl'
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-06_15-42.03/r2d1_dd0/run_0/params.pkl'
                         )
 
     args = parser.parse_args()
 
     if args.mode == 'train':
-        build_and_train()
+        build_and_train(args.pre_trained_model)
     else:
         evaluate(args.pre_trained_model)
 

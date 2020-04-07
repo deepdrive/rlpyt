@@ -9,6 +9,7 @@ example.
 """
 
 from deepdrive_zero.envs.env import Deepdrive2DEnv
+from deepdrive_zero.envs.variants import OneWaypointEnv
 
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.samplers.parallel.gpu.sampler import GpuSampler
@@ -167,9 +168,9 @@ def test():
         incent_win=True,
         constrain_controls=False,
         physics_steps_per_observation=12,
-        dummy_accel_agent_indices=[1],
+        contain_prev_actions_in_obs=False,
+        dummy_accel_agent_indices=[1]
     )
-    # env = Deepdrive2DEnv(is_intersection_map=env_config['is_intersection_map'])
     env = Deepdrive2DEnv()
     env.configure_env(env_config)
 
