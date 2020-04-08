@@ -35,7 +35,7 @@ def build_and_train(pre_trained_model=None, run_ID=0):
         agent_state_dict = None
         optimizer_state_dict = None
 
-    affinity = dict(cuda_idx=0, workers_cpus=[0,1,2,3,4,5,6])
+    affinity = dict(cuda_idx=0, workers_cpus=[0, 1, 2, 3, 4, 5, 6])
     config = configs['r2d1']
 
     cfg = dict(env_id=config['env']['id'], **config)
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.mode == 'train':
-        build_and_train(args.pre_trained_model)
+        build_and_train()
     else:
         evaluate(args.pre_trained_model)
 

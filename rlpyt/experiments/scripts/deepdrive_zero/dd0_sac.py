@@ -26,21 +26,24 @@ import numpy as np
 
 
 env_config = dict(
-    id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
-    is_intersection_map=True,
-    is_one_waypoint_map=False,
-    expect_normalized_actions=True,
-    expect_normalized_action_deltas=False,
-    jerk_penalty_coeff=0.0,
-    gforce_penalty_coeff=0.0,
-    lane_penalty_coeff=0.02,
-    collision_penalty_coeff=0.31,
-    speed_reward_coeff=0.50,
-    end_on_harmful_gs=False,
-    incent_win=True,
-    constrain_controls=False,
-    physics_steps_per_observation=6,
-)
+                id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
+                is_intersection_map=True,
+                is_one_waypoint_map=False,
+                expect_normalized_actions=True,
+                expect_normalized_action_deltas=False,
+                jerk_penalty_coeff=3.3e-6,
+                gforce_penalty_coeff=0.006,
+                lane_penalty_coeff=0.02,
+                collision_penalty_coeff=4,
+                speed_reward_coeff=0.50,
+                end_on_harmful_gs=False,
+                incent_win=True,
+                incent_yield_to_oncoming_traffic=True,
+                constrain_controls=False,
+                physics_steps_per_observation=12,
+                contain_prev_actions_in_obs=True,
+                dummy_accel_agent_indices=[1]
+            )
 
 
 def make_env(*args, **kwargs):
@@ -50,12 +53,12 @@ def make_env(*args, **kwargs):
 
 
 def build_and_train(run_ID=0, cuda_idx=None):
-    sampler = SerialSampler(
+    sampler = CpuSampler(
         EnvCls=make_env,
         env_kwargs=env_config,
         eval_env_kwargs=env_config,
-        batch_T=1,  # One time-step per sampler iteration.
-        batch_B=1,  # One environment (i.e. sampler Batch dimension).
+        batch_T=4,  # One time-step per sampler iteration.
+        batch_B=8,  # One environment (i.e. sampler Batch dimension).
         max_decorrelation_steps=0,
         eval_n_envs=2,
         eval_max_steps=int(51e3),
@@ -76,7 +79,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
         sampler=sampler,
         n_steps=1e6,
         log_interval_steps=10,
-        affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0,1,2,3,4,5,6]),
+        affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0, 1, 2, 3, 4, 5, 6]),
     )
 
     config = dict(env_id=env_config['id'])

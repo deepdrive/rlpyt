@@ -17,9 +17,9 @@ class DeepdriveR2d1Model(torch.nn.Module):
             self,
             observation_shape,
             output_size,
-            fc_size=128,  # Between mlp and lstm.
-            lstm_size=128,
-            head_size=128,
+            fc_size=256,  # Between mlp and lstm.
+            lstm_size=256,
+            head_size=256,
             dueling=True,
             normalize_observation=False,
             norm_obs_clip = 10,
@@ -41,7 +41,7 @@ class DeepdriveR2d1Model(torch.nn.Module):
         self.mlp = MlpModel(input_size=input_shape,
                             hidden_sizes=[256],
                             output_size=fc_size,
-                            nonlinearity=torch.nn.Tanh  # Match spinningup
+                            nonlinearity=torch.nn.ReLU  # Match spinningup
                             )
         self.lstm = torch.nn.LSTM(fc_size + output_size + 1, lstm_size)
         if dueling:
@@ -50,7 +50,7 @@ class DeepdriveR2d1Model(torch.nn.Module):
             self.head = MlpModel(input_size=lstm_size,
                                  hidden_sizes=head_size,
                                  output_size=output_size,
-                                 nonlinearity=torch.nn.Tanh) #TODO: test with Tanh
+                                 nonlinearity=torch.nn.ReLU) #TODO: test with Tanh
 
     def forward(self, observation, prev_action, prev_reward, init_rnn_state):
         """Feedforward layers process as [T*B,H]. Return same leading dims as
