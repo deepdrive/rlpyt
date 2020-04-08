@@ -7,6 +7,9 @@ be easier to debug.
 Requires OpenAI gym (and maybe mujoco).  If not installed, move on to next
 example.
 """
+import sys
+sys.path.append('/home/isaac/codes/dd-zero/deepdrive-zero')
+sys.path.append('/home/isaac/codes/dd-zero/rlpyt')
 
 from deepdrive_zero.envs.env import Deepdrive2DEnv
 from deepdrive_zero.envs.variants import OneWaypointEnv

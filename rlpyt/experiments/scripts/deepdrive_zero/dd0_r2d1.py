@@ -1,3 +1,8 @@
+import sys
+sys.path.append('/home/isaac/codes/dd-zero/deepdrive-zero')
+sys.path.append('/home/isaac/codes/dd-zero/rlpyt')
+
+
 from deepdrive_zero.envs.env import Deepdrive2DEnv
 from rlpyt.samplers.parallel.gpu.sampler import GpuSampler
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
