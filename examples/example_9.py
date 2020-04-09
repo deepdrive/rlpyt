@@ -118,7 +118,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
         # double_dqn=True,
         # target_update_interval=1,
         # prioritized_replay=True,
-        ReplayBufferCls=UniformReplayBuffer,
+        frame_state_space=False,
     )
 
     agent = CustomDqnAgent()
