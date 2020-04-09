@@ -120,7 +120,7 @@ def evaluate(pre_trained_model):
         obs, reward, done, info = env.step(a)
         env.render()
         if done:
-            break
+            obs = env.reset()
 
 
 if __name__ == "__main__":
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_03-28_18-46.54/sac_ddzero/run_0/params.pkl')
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-07_19-25.41/sac_dd0/run_0/params.pkl')
 
     args = parser.parse_args()
 

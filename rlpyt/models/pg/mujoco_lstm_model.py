@@ -21,7 +21,7 @@ class MujocoLstmModel(torch.nn.Module):
             action_size,
             hidden_sizes=None,  # None for default (see below).
             lstm_size=256,
-            nonlinearity=torch.nn.ReLU,
+            nonlinearity=torch.nn.Tanh,
             normalize_observation=False,
             norm_obs_clip=10,
             norm_obs_var_clip=1e-6,

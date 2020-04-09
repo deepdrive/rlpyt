@@ -50,3 +50,4 @@ class AlternatingMujocoLstmAgent(MujocoMixin,
 
     def __init__(self, ModelCls=MujocoLstmModel, **kwargs):
         super().__init__(ModelCls=ModelCls, **kwargs)
+

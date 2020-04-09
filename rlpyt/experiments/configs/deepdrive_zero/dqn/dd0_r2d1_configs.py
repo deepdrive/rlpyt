@@ -18,7 +18,7 @@ config = dict(
         replay_ratio=1,  # In the paper, more like 0.8.
         replay_size=int(5e5),
         learning_rate=5e-5,
-        clip_grad_norm=80.,  # 80 (Steven.)
+        clip_grad_norm=80.,  # 80 (Steven.) #TODO:test sth like 1e6. same as mujoco ppo
         min_steps_learn=int(1e4),
         eps_steps=int(1e6),
         target_update_interval=2500, #2500
@@ -74,7 +74,7 @@ config = dict(
     ),
     runner=dict(
         n_steps=10e6,
-        log_interval_steps=1e1,
+        log_interval_steps=1e3,
     ),
     sampler=dict(
         batch_T=30,  # Match the algo / replay_ratio.
