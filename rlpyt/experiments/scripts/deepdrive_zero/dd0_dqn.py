@@ -180,7 +180,7 @@ def test():
 
     obs = env.reset()
     while True:
-        a = np.array([0, 1, -1])
+        a = np.array([0, -0.5, 0])
         obs, reward, done, info = env.step(a)
         env.render()
         if done:

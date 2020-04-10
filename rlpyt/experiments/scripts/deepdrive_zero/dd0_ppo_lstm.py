@@ -22,12 +22,12 @@ config = dict(
     agent=dict(),
     algo=dict(
         discount=0.99,
-        learning_rate=1e-4,
-        clip_grad_norm=1.,
-        entropy_loss_coeff=0.01,
-        gae_lambda=0.97,
-        minibatches=8,
-        epochs=4,
+        learning_rate=8e-5,
+        clip_grad_norm=1e6,
+        entropy_loss_coeff=0.05,
+        gae_lambda=1,
+        minibatches=4, #8
+        epochs=4, #4
         ratio_clip=0.2,
         normalize_advantage=False,
         linear_lr_schedule=False
@@ -54,7 +54,7 @@ config = dict(
     ),
     model=dict(
         hidden_sizes=[256, 256],
-        # lstm_size=256,
+        lstm_size=128,
         normalize_observation=False,
     ),
     optim=dict(),
@@ -63,8 +63,8 @@ config = dict(
         log_interval_steps=1e3,
     ),
     sampler=dict(
-        batch_T=8,
-        batch_B=8,
+        batch_T=30,
+        batch_B=32,
         eval_n_envs=2,
         eval_max_steps=int(51e3),
         eval_max_trajectories=50,
@@ -97,12 +97,12 @@ def build_and_train(pre_trained_model=None, run_ID=0):
         EnvCls=make_env,
         env_kwargs=config["env"],
         eval_env_kwargs=config["env"],
-        CollectorCls=CpuResetCollector, #cuz of lstm, WaitReser collector is suggested by astooke
+        CollectorCls=CpuWaitResetCollector, #cuz of lstm, WaitReser collector is suggested by astooke
         **config["sampler"]
     )
     algo = PPO(optim_kwargs=config["optim"], **config["algo"])
-    agent = MujocoFfAgent(model_kwargs=config["model"], **config["agent"])
-    # agent = MujocoLstmAgent(model_kwargs=config["model"], **config["agent"])
+    # agent = MujocoFfAgent(model_kwargs=config["model"], **config["agent"])
+    agent = MujocoLstmAgent(model_kwargs=config["model"], **config["agent"])
     runner = MinibatchRlEval(
         algo=algo,
         agent=agent,
@@ -112,7 +112,7 @@ def build_and_train(pre_trained_model=None, run_ID=0):
     )
 
     cfg = dict(env_id=config['env']['id'], **config)
-    algo_name = 'ppo_'
+    algo_name = 'ppo_lstm_'
     name = algo_name + config['env']['id']
     log_dir = algo_name + "dd0"
 
