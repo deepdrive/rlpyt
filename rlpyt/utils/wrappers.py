@@ -2,6 +2,7 @@ from rlpyt.envs.base import Env
 from rlpyt.envs.gym import IntBox
 import gym
 import numpy as np
+import random
 
 
 class DeepDriveDiscretizeActionWrapper(gym.ActionWrapper, Env):
@@ -25,9 +26,9 @@ class DeepDriveDiscretizeActionWrapper(gym.ActionWrapper, Env):
                 # for b in discrete_brake:
                 #     self.action_items.append([s, a, b])
                 if a >= 0:
-                    self.action_items.append([s, a, 0])
+                    self.action_items.append([s, a, -random.random()])
                 else:
-                    self.action_items.append([s, 0, -a])
+                    self.action_items.append([s, -random.random(), -a])
 
     def step(self, action):
         # action input is continues:
