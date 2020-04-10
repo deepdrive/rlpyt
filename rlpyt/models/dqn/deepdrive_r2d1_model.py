@@ -39,7 +39,7 @@ class DeepdriveR2d1Model(torch.nn.Module):
             self.norm_obs_var_clip = norm_obs_var_clip
 
         self.mlp = MlpModel(input_size=input_shape,
-                            hidden_sizes=[256],
+                            hidden_sizes=[256, 256],
                             output_size=fc_size,
                             nonlinearity=torch.nn.ReLU  # Match spinningup
                             )
