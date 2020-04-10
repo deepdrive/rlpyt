@@ -37,7 +37,7 @@ config = dict(
         replay_ratio=1,  # In the paper, more like 0.8.
         replay_size=int(1e6),
         learning_rate=1e-4,
-        clip_grad_norm=1e6.,  # 80 (Steven.) #TODO:test sth like 1e6. same as mujoco ppo
+        clip_grad_norm=1e6,  # 80 (Steven.) #TODO:test sth like 1e6. same as mujoco ppo
         min_steps_learn=int(1e5),
         eps_steps=int(1e6),
         target_update_interval=100, #2500
@@ -65,6 +65,7 @@ config = dict(
         collision_penalty_coeff=4,
         speed_reward_coeff=0.50,
         gforce_threshold=None,
+        end_on_harmful_gs=False,
         incent_win=True,
         incent_yield_to_oncoming_traffic=True,
         constrain_controls=False,
@@ -189,7 +190,7 @@ if __name__ == "__main__":
     parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-09_19-00.47/r2d1_dd0/run_0/params.pkl'
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-09_19-01.14/r2d1_dd0/run_0/params.pkl'
                         )
 
     args = parser.parse_args()

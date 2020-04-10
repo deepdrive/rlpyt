@@ -114,3 +114,6 @@ venv.bak/
 
 # PyCharm
 .idea
+
+#nohup
+nohup.out
