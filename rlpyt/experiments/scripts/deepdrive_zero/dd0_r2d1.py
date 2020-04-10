@@ -2,6 +2,7 @@ import sys
 sys.path.append('/home/isaac/codes/dd-zero/deepdrive-zero') 
 sys.path.append('/home/isaac/codes/dd-zero/rlpyt')
 
+
 from deepdrive_zero.envs.env import Deepdrive2DEnv
 from rlpyt.samplers.parallel.gpu.sampler import GpuSampler
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
@@ -69,12 +70,12 @@ config = dict(
         incent_win=True,
         incent_yield_to_oncoming_traffic=True,
         constrain_controls=False,
-        physics_steps_per_observation=12,
+        physics_steps_per_observation=6,
         contain_prev_actions_in_obs=False,
         dummy_accel_agent_indices=[1] #for opponent
     ),
     runner=dict(
-        n_steps=10e6,
+        n_steps=100e6,
         log_interval_steps=1e3,
     ),
     sampler=dict(
@@ -125,6 +126,7 @@ def build_and_train(pre_trained_model=None, run_ID=0):
     )
 
     algo = R2D1(
+        initial_optim_state_dict=optimizer_state_dict,
         optim_kwargs=config["optim"],
         **config["algo"]
     )
@@ -190,13 +192,14 @@ if __name__ == "__main__":
     parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-09_19-01.14/r2d1_dd0/run_0/params.pkl'
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-10_12-53.03/r2d1_dd0/run_0/params.pkl'
                         )
 
     args = parser.parse_args()
 
     if args.mode == 'train':
-        build_and_train(pre_trained_model=args.pre_trained_model)
+        #build_and_train(pre_trained_model=args.pre_trained_model)
+        build_and_train()
     else:
         evaluate(args.pre_trained_model)
 
