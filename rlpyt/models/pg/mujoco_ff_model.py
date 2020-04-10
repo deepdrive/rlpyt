@@ -19,8 +19,8 @@ class MujocoFfModel(torch.nn.Module):
             observation_shape,
             action_size,
             hidden_sizes=None,  # None for default (see below).
-            hidden_nonlinearity=torch.nn.Tanh,  # Module form.
-            mu_nonlinearity=torch.nn.Tanh,  # Module form.
+            hidden_nonlinearity=torch.nn.ReLU,  # Module form.
+            mu_nonlinearity=None, #torch.nn.ReLU,  # Module form.
             init_log_std=0.,
             normalize_observation=False,
             norm_obs_clip=10,

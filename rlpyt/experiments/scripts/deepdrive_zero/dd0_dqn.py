@@ -170,10 +170,10 @@ def test():
         end_on_harmful_gs=False,
         incent_win=True,
         constrain_controls=False,
-        physics_steps_per_observation=12,
+        physics_steps_per_observation=6,
         contain_prev_actions_in_obs=False,
-        dummy_accel_agent_indices=[1],
-        dummy_random_scenario=True,
+        # dummy_accel_agent_indices=[1],
+        # dummy_random_scenario=True,
     )
     env = Deepdrive2DEnv()
     env.configure_env(env_config)

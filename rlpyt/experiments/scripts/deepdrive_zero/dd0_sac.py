@@ -28,26 +28,47 @@ from rlpyt.utils.logging import logger
 import torch
 import numpy as np
 
-
 env_config = dict(
-                id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
-                is_intersection_map=True,
-                is_one_waypoint_map=False,
-                expect_normalized_actions=True,
-                expect_normalized_action_deltas=False,
-                jerk_penalty_coeff=3.3e-6,
-                gforce_penalty_coeff=0.006,
-                lane_penalty_coeff=0.02,
-                collision_penalty_coeff=4,
-                speed_reward_coeff=0.50,
-                end_on_harmful_gs=False,
-                incent_win=True,
-                incent_yield_to_oncoming_traffic=True,
-                constrain_controls=False,
-                physics_steps_per_observation=12,
-                contain_prev_actions_in_obs=True,
-                dummy_accel_agent_indices=[1]
-            )
+        id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
+        is_intersection_map=True,
+        is_one_waypoint_map=False,
+        expect_normalized_actions=True,
+        expect_normalized_action_deltas=False,
+        jerk_penalty_coeff=3.3e-6,
+        gforce_penalty_coeff=0.006,
+        lane_penalty_coeff=0.1, #0.02,
+        collision_penalty_coeff=4,
+        speed_reward_coeff=0.50,
+        end_on_harmful_gs=False,
+        incent_win=True,
+        incent_yield_to_oncoming_traffic=True,
+        constrain_controls=False,
+        physics_steps_per_observation=6,
+        contain_prev_actions_in_obs=True,
+        dummy_accel_agent_indices=[1] #for opponent
+    )
+
+## suggested by craig for initial training
+# env_config = dict(
+#         id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
+#         is_intersection_map=True,
+#         is_one_waypoint_map=False,
+#         expect_normalized_actions=True,
+#         expect_normalized_action_deltas=False,
+#         jerk_penalty_coeff=0,
+#         gforce_penalty_coeff=0.0,
+#         lane_penalty_coeff=0.02, #0.02,
+#         collision_penalty_coeff=4,
+#         speed_reward_coeff=0.50,
+#         gforce_threshold=None,
+#         incent_win=True,
+#         incent_yield_to_oncoming_traffic=True,
+#         constrain_controls=False,
+#         physics_steps_per_observation=12,
+#         contain_prev_actions_in_obs=False,
+#         dummy_accel_agent_indices=[1] #for opponent
+#     ),
+
 
 
 def make_env(*args, **kwargs):
@@ -61,7 +82,7 @@ def build_and_train(run_ID=0, cuda_idx=None):
         EnvCls=make_env,
         env_kwargs=env_config,
         eval_env_kwargs=env_config,
-        batch_T=4,  # One time-step per sampler iteration.
+        batch_T=8,  # One time-step per sampler iteration.
         batch_B=8,  # One environment (i.e. sampler Batch dimension).
         max_decorrelation_steps=0,
         eval_n_envs=2,
@@ -71,10 +92,15 @@ def build_and_train(run_ID=0, cuda_idx=None):
 
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
     algo = SAC(
-        batch_size=64,
+        min_steps_learn=int(1e3),
+        replay_ratio=8,  # data_consumption / data_generation
+        target_update_tau=0.5,  # tau=1 for hard update.
+        target_update_interval=100,  # 1000 for hard update, 1 for soft.
+        batch_size=32,
         replay_size=100000,
         bootstrap_timelimit=False,
     )
+
     agent = SacAgent()
 
     runner = MinibatchRlEval(
@@ -82,13 +108,13 @@ def build_and_train(run_ID=0, cuda_idx=None):
         agent=agent,
         sampler=sampler,
         n_steps=1e6,
-        log_interval_steps=10,
+        log_interval_steps=1e3,
         affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0, 1, 2, 3, 4, 5, 6]),
     )
 
     config = dict(env_id=env_config['id'])
 
-    algo_name = 'sac_'
+    algo_name = 'sac_opp_'
     name = algo_name + env_config['id']
     log_dir = algo_name + "dd0"
 
@@ -129,10 +155,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=0)
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
-    parser.add_argument('--mode', help='train or eval', default='train')
+    parser.add_argument('--mode', help='train or eval', default='eval')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-07_19-25.41/sac_dd0/run_0/params.pkl')
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-09_19-57.59/sac_opp_dd0/run_0/params.pkl')
 
     args = parser.parse_args()
 
@@ -143,5 +169,3 @@ if __name__ == "__main__":
         )
     else:
         evaluate(args.pre_trained_model)
-
-

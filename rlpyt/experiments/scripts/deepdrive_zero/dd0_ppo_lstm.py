@@ -23,14 +23,14 @@ config = dict(
     algo=dict(
         discount=0.99,
         learning_rate=1e-4,
-        clip_grad_norm=1e6,
-        entropy_loss_coeff=0.0,
-        gae_lambda=0.95,
-        minibatches=4,
+        clip_grad_norm=1.,
+        entropy_loss_coeff=0.01,
+        gae_lambda=0.97,
+        minibatches=8,
         epochs=4,
         ratio_clip=0.2,
-        normalize_advantage=True,
-        linear_lr_schedule=True
+        normalize_advantage=False,
+        linear_lr_schedule=False
     ),
     env = dict(
         id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
@@ -38,22 +38,23 @@ config = dict(
         is_one_waypoint_map=False,
         expect_normalized_actions=True,
         expect_normalized_action_deltas=False,
-        jerk_penalty_coeff=3.3e-6,
-        gforce_penalty_coeff=0.006,
-        lane_penalty_coeff=0.1, #0.02,
+        jerk_penalty_coeff=0,
+        gforce_penalty_coeff=0.0,
+        lane_penalty_coeff=0.02, #0.02,
         collision_penalty_coeff=4,
         speed_reward_coeff=0.50,
+        gforce_threshold=None, ##question
         end_on_harmful_gs=False,
         incent_win=True,
         incent_yield_to_oncoming_traffic=True,
         constrain_controls=False,
         physics_steps_per_observation=6,
-        contain_prev_actions_in_obs=False,
-        dummy_accel_agent_indices=[1] #for opponent
+        contain_prev_actions_in_obs=True,
+        # dummy_accel_agent_indices=[1] #for opponent
     ),
     model=dict(
-        hidden_sizes=[128, 128],
-        lstm_size=128,
+        hidden_sizes=[256, 256],
+        # lstm_size=256,
         normalize_observation=False,
     ),
     optim=dict(),
@@ -62,8 +63,8 @@ config = dict(
         log_interval_steps=1e3,
     ),
     sampler=dict(
-        batch_T=32,
-        batch_B=64,
+        batch_T=8,
+        batch_B=8,
         eval_n_envs=2,
         eval_max_steps=int(51e3),
         eval_max_trajectories=50,
@@ -96,12 +97,12 @@ def build_and_train(pre_trained_model=None, run_ID=0):
         EnvCls=make_env,
         env_kwargs=config["env"],
         eval_env_kwargs=config["env"],
-        CollectorCls=CpuWaitResetCollector, #cuz of lstm, WaitReser collector is suggested by astooke
+        CollectorCls=CpuResetCollector, #cuz of lstm, WaitReser collector is suggested by astooke
         **config["sampler"]
     )
     algo = PPO(optim_kwargs=config["optim"], **config["algo"])
-    # agent = MujocoFfAgent(model_kwargs=config["model"], **config["agent"])
-    agent = MujocoLstmAgent(model_kwargs=config["model"], **config["agent"])
+    agent = MujocoFfAgent(model_kwargs=config["model"], **config["agent"])
+    # agent = MujocoLstmAgent(model_kwargs=config["model"], **config["agent"])
     runner = MinibatchRlEval(
         algo=algo,
         agent=agent,
@@ -111,7 +112,7 @@ def build_and_train(pre_trained_model=None, run_ID=0):
     )
 
     cfg = dict(env_id=config['env']['id'], **config)
-    algo_name = 'ppo_lstm_'
+    algo_name = 'ppo_'
     name = algo_name + config['env']['id']
     log_dir = algo_name + "dd0"
 
