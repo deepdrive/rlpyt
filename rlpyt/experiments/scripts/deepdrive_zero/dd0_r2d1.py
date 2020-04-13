@@ -38,7 +38,7 @@ config = dict(
         replay_ratio=1,  # In the paper, more like 0.8.
         replay_size=int(1e6),
         learning_rate=1e-4,
-        clip_grad_norm=1e6,  # 80 (Steven.) #TODO:test sth like 1e6. same as mujoco ppo
+        clip_grad_norm=1,  # 80 (Steven.) #TODO:test sth like 1e6. same as mujoco ppo
         min_steps_learn=int(1e5),
         eps_steps=int(1e6),
         target_update_interval=100, #2500
@@ -60,8 +60,8 @@ config = dict(
         is_one_waypoint_map=False,
         expect_normalized_actions=True,
         expect_normalized_action_deltas=False,
-        jerk_penalty_coeff=0,
-        gforce_penalty_coeff=0.0,
+        jerk_penalty_coeff=3.3e-6,
+        gforce_penalty_coeff=0.006,
         lane_penalty_coeff=0.02, #0.02,
         collision_penalty_coeff=4,
         speed_reward_coeff=0.50,
@@ -75,11 +75,11 @@ config = dict(
         dummy_accel_agent_indices=[1] #for opponent
     ),
     runner=dict(
-        n_steps=100e6,
-        log_interval_steps=1e3,
+        n_steps=30e6,
+        log_interval_steps=1e4,
     ),
     sampler=dict(
-        batch_T=80,  # Match the algo / replay_ratio.
+        batch_T=128,  # Match the algo / replay_ratio.
         batch_B=128,
         max_decorrelation_steps=100,
         eval_n_envs=2,
@@ -192,14 +192,14 @@ if __name__ == "__main__":
     parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-10_12-53.03/r2d1_dd0/run_0/params.pkl'
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-12_12-16.06/r2d1_dd0/run_0/params.pkl'
                         )
 
     args = parser.parse_args()
 
     if args.mode == 'train':
-        #build_and_train(pre_trained_model=args.pre_trained_model)
-        build_and_train()
+        build_and_train(pre_trained_model=args.pre_trained_model)
+        #build_and_train()
     else:
         evaluate(args.pre_trained_model)
 
