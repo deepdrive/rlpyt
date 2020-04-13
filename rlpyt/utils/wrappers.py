@@ -1,3 +1,4 @@
+
 from rlpyt.envs.base import Env
 from rlpyt.envs.gym import IntBox
 import gym
@@ -10,9 +11,9 @@ class DeepDriveDiscretizeActionWrapper(gym.ActionWrapper, Env):
     """
     def __init__(self, env):
         super(DeepDriveDiscretizeActionWrapper, self).__init__(env)
-        discrete_steer = list(np.arange(-0.5, 0.51, 0.1)) #list(np.arange(-1, 1.01, 0.08))
-        discrete_acc   = list(np.arange(-1, 1.01, 0.5))
-        discrete_brake = list(np.arange(-1, 1.01, 0.5))
+        discrete_steer = list(np.arange(-0.3, 0.31, 0.1)) #list(np.arange(-1, 1.01, 0.08))
+        discrete_acc   = list(np.arange(-1, 1.01, 1))
+        discrete_brake = list(np.arange(-1, 1.01, 1))
         self.discrete_act = [discrete_steer, discrete_acc, discrete_brake]  # acc, steer
         self.n_steer = len(self.discrete_act[0])
         self.n_acc = len(self.discrete_act[1])

@@ -28,7 +28,7 @@ import time
 ##########################################################3
 config = dict(
     agent=dict(),
-    model=dict(dueling=False),
+    model=dict(dueling=True),
     algo=dict(
         discount=0.997,
         batch_T=80,
@@ -60,8 +60,8 @@ config = dict(
         is_one_waypoint_map=False,
         expect_normalized_actions=True,
         expect_normalized_action_deltas=False,
-        jerk_penalty_coeff=3.3e-6,
-        gforce_penalty_coeff=0.006,
+        jerk_penalty_coeff=0, #3.3e-6,
+        gforce_penalty_coeff=0, #0.006,
         lane_penalty_coeff=0.02, #0.02,
         collision_penalty_coeff=4,
         speed_reward_coeff=0.50,
@@ -75,7 +75,7 @@ config = dict(
         dummy_accel_agent_indices=[1] #for opponent
     ),
     runner=dict(
-        n_steps=30e6,
+        n_steps=20e6,
         log_interval_steps=1e4,
     ),
     sampler=dict(
@@ -198,8 +198,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.mode == 'train':
-        build_and_train(pre_trained_model=args.pre_trained_model)
-        #build_and_train()
+        #build_and_train(pre_trained_model=args.pre_trained_model)
+        build_and_train()
     else:
         evaluate(args.pre_trained_model)
 
