@@ -192,7 +192,7 @@ if __name__ == "__main__":
     parser.add_argument('--mode', help='train or eval', default='eval')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-12_12-16.06/r2d1_dd0/run_0/params.pkl'
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-12_22-19.34/r2d1_dd0/run_0/params.pkl'
                         )
 
     args = parser.parse_args()

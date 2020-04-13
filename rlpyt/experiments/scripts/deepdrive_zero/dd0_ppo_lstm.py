@@ -39,15 +39,15 @@ config = dict(
         is_one_waypoint_map=False,
         expect_normalized_actions=True,
         expect_normalized_action_deltas=False,
-        jerk_penalty_coeff=3.3e-6,
+        jerk_penalty_coeff=3.3e-6 * 2,
         gforce_penalty_coeff=0.006,
-        lane_penalty_coeff=0.1, #0.02,
+        lane_penalty_coeff=0.3, #0.02,
         collision_penalty_coeff=4,
         speed_reward_coeff=0.50,
         gforce_threshold=None, ##question
         end_on_harmful_gs=False,
-        incent_win=True,
-        incent_yield_to_oncoming_traffic=True,
+        incent_win=True, # reward for reaching the target
+        incent_yield_to_oncoming_traffic=True, #this just consider env.agents not dummy ones. So doesn't have any effect on dummy opp agent
         constrain_controls=False,
         physics_steps_per_observation=6,
         contain_prev_actions_in_obs=False,
@@ -60,8 +60,8 @@ config = dict(
     ),
     optim=dict(),
     runner=dict(
-        n_steps=10e6,
-        log_interval_steps=1e3,
+        n_steps=3e6,
+        log_interval_steps=1e4,
     ),
     sampler=dict(
         batch_T=128,
@@ -170,10 +170,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=0)
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
-    parser.add_argument('--mode', help='train or eval', default='eval')
+    parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-11_16-26.09/ppo_lstm_mbopp_dd0/run_0/params.pkl')
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-12_05-59.50/ppo_lstm_mbopp_dd0/run_0/params.pkl')
 
     args = parser.parse_args()
 
