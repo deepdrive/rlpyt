@@ -52,6 +52,7 @@ env_config = dict(
     incent_win=True,
     constrain_controls=False,
     physics_steps_per_observation=12,
+
     dummy_accel_agent_indices=[1],
 )
 
@@ -172,7 +173,7 @@ def test():
         constrain_controls=False,
         physics_steps_per_observation=6,
         contain_prev_actions_in_obs=False,
-        # dummy_accel_agent_indices=[1],
+        dummy_accel_agent_indices=[1],
         # dummy_random_scenario=True,
     )
     env = Deepdrive2DEnv()
@@ -180,7 +181,7 @@ def test():
 
     obs = env.reset()
     while True:
-        a = np.array([0, -0.5, 0])
+        a = np.array([0, 0.2, 0])
         obs, reward, done, info = env.step(a)
         env.render()
         if done:
