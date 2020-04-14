@@ -39,9 +39,9 @@ config = dict(
         is_one_waypoint_map=False,
         expect_normalized_actions=True,
         expect_normalized_action_deltas=False,
-        jerk_penalty_coeff=3.3e-6 * 2,
-        gforce_penalty_coeff=0.006,
-        lane_penalty_coeff=0.3, #0.02,
+        jerk_penalty_coeff=0, #3.3e-6 * 2,
+        gforce_penalty_coeff=0, #0.006,
+        lane_penalty_coeff=0.02, #0.02,
         collision_penalty_coeff=4,
         speed_reward_coeff=0.50,
         gforce_threshold=None, ##question
@@ -51,7 +51,8 @@ config = dict(
         constrain_controls=False,
         physics_steps_per_observation=6,
         contain_prev_actions_in_obs=False,
-        dummy_accel_agent_indices=[1] #for opponent
+        dummy_accel_agent_indices=[1], #for opponent
+        dummy_random_scenario=False, #select randomly between 3 scenarios for dummy agent
     ),
     model=dict(
         hidden_sizes=[256, 256],
@@ -60,7 +61,7 @@ config = dict(
     ),
     optim=dict(),
     runner=dict(
-        n_steps=3e6,
+        n_steps=50e6,
         log_interval_steps=1e4,
     ),
     sampler=dict(
@@ -122,6 +123,8 @@ def build_and_train(run_ID=0, cuda_idx=0, pre_trained_model=None):
 
     cfg = dict(env_id=config['env']['id'], **config)
     algo_name = 'ppo_lstm_mbopp_'
+    if config['env']['dummy_random_scenario']:
+        algo_name += '3scenario_'
     name = algo_name + config['env']['id']
     log_dir = algo_name + "dd0"
 
@@ -147,7 +150,7 @@ def evaluate(pre_trained_model):
             action=env.action_space,
     )
     agent.initialize(env_spaces)
-    # agent.load_state_dict(agent_state_dict)
+    # agent.sample_mode(0)
 
     obs = env.reset()
     prev_action = torch.tensor([0, 0, 0], dtype=torch.float)  # None
@@ -181,7 +184,7 @@ if __name__ == "__main__":
         build_and_train(
             run_ID=args.run_ID,
             cuda_idx=args.cuda_idx,
-            pre_trained_model=args.pre_trained_model
+            pre_trained_model=None #args.pre_trained_model
         )
     else:
         evaluate(args.pre_trained_model)
