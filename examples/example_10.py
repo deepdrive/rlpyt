@@ -1,5 +1,5 @@
-import sys 
-sys.path.append('/home/isaac/codes/dd-zero/deepdrive-zero') 
+import sys
+sys.path.append('/home/isaac/codes/dd-zero/deepdrive-zero')
 sys.path.append('/home/isaac/codes/dd-zero/rlpyt')
 
 
@@ -55,27 +55,10 @@ config = dict(
     ),
     optim=dict(),
     env = dict(
-        id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
-        is_intersection_map=True,
-        is_one_waypoint_map=False,
-        expect_normalized_actions=True,
-        expect_normalized_action_deltas=False,
-        jerk_penalty_coeff=0, #3.3e-6,
-        gforce_penalty_coeff=0, #0.006,
-        lane_penalty_coeff=0.02, #0.02,
-        collision_penalty_coeff=4,
-        speed_reward_coeff=0.50,
-        gforce_threshold=None,
-        end_on_harmful_gs=False,
-        incent_win=True,
-        incent_yield_to_oncoming_traffic=True,
-        constrain_controls=False,
-        physics_steps_per_observation=6,
-        contain_prev_actions_in_obs=False,
-        dummy_accel_agent_indices=[1] #for opponent
+        id='CartPole-v0',
     ),
     runner=dict(
-        n_steps=100e6,
+        n_steps=10e6,
         log_interval_steps=1e4,
     ),
     sampler=dict(
@@ -90,9 +73,7 @@ config = dict(
 
 
 def make_env(*args, **kwargs):
-    env = Deepdrive2DEnv()
-    env.configure_env(kwargs)
-    env = DeepDriveDiscretizeActionWrapper(env)
+    env = gym.make('CartPole-v0')
     env = GymEnvWrapper(env)
     return env
 
@@ -113,10 +94,8 @@ def build_and_train(pre_trained_model=None, run_ID=0):
     cfg = dict(env_id=config['env']['id'], **config)
     algo_name = 'r2d1_'
     name = algo_name + config['env']['id']
-    log_dir = algo_name + "dd0"
+    log_dir = algo_name + "cartpole"
 
-    # TODO: doesn't work with CpuSampler. Check why? checkCollectorCls
-    # TODO: test wirh AlternatingSampler ->2x faster?
     sampler = CpuSampler(
         EnvCls=make_env,
         env_kwargs=config['env'],
@@ -136,7 +115,6 @@ def build_and_train(pre_trained_model=None, run_ID=0):
         **config["agent"]
     )
 
-    #TODO: test AsyncRlEval. need AsyncSampler
     runner = MinibatchRlEval(
         algo=algo,
         agent=agent,
@@ -145,10 +123,8 @@ def build_and_train(pre_trained_model=None, run_ID=0):
         **config["runner"]
     )
 
-    start = time.time()
     with logger_context(log_dir, run_ID, name, cfg, snapshot_mode='last'):
         runner.train()
-    print('duration: ', time.time() - start)
 
 
 def evaluate(pre_trained_model):
@@ -188,7 +164,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--mode', help='train or eval', default='eval')
+    parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
                         default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-13_22-27.59/r2d1_dd0/run_0/params.pkl'
