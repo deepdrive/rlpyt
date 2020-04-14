@@ -28,20 +28,26 @@ import time
 ##########################################################3
 config = dict(
     agent=dict(),
-    model=dict(dueling=False),
+    model=dict(
+        mlp_hidden_sizes=[256, 256],
+        fc_size=256,  # Between mlp and lstm.
+        lstm_size=256,
+        head_size=256,
+        dueling=False,
+    ),
     algo=dict(
         discount=0.997,
-        batch_T=128,
+        batch_T=80,
         batch_B=64,  # In the paper, 64.
         warmup_T=40,
         store_rnn_state_interval=40,
         replay_ratio=1,  # In the paper, more like 0.8.
         replay_size=int(1e6),
-        learning_rate=8e-5,
+        learning_rate=1e-4,
         clip_grad_norm=1e6,  # 80 (Steven.) #TODO:test sth like 1e6. same as mujoco ppo
         min_steps_learn=int(1e5),
         eps_steps=int(1e6),
-        target_update_interval=200, #2500
+        target_update_interval=100, #2500
         double_dqn=True,
         frame_state_space=False,
         prioritized_replay=True,
@@ -70,21 +76,21 @@ config = dict(
         incent_win=True,
         incent_yield_to_oncoming_traffic=True,
         constrain_controls=False,
-        physics_steps_per_observation=6,
+        physics_steps_per_observation=12,
         contain_prev_actions_in_obs=False,
-        dummy_accel_agent_indices=[1] #for opponent
+        # dummy_accel_agent_indices=[1] #for opponent
     ),
     runner=dict(
-        n_steps=100e6,
+        n_steps=10e6,
         log_interval_steps=1e4,
     ),
     sampler=dict(
-        batch_T=128,  # Match the algo / replay_ratio.
+        batch_T=80,  # Match the algo / replay_ratio.
         batch_B=128,
         max_decorrelation_steps=100,
         eval_n_envs=2,
         eval_max_steps=int(51e3),
-        eval_max_trajectories=100,
+        eval_max_trajectories=10,
     ),
 )
 
@@ -188,7 +194,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--mode', help='train or eval', default='eval')
+    parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
                         default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-13_22-27.59/r2d1_dd0/run_0/params.pkl'

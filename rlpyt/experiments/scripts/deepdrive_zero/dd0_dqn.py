@@ -52,7 +52,6 @@ env_config = dict(
     incent_win=True,
     constrain_controls=False,
     physics_steps_per_observation=12,
-
     dummy_accel_agent_indices=[1],
 )
 
@@ -149,6 +148,7 @@ def evaluate(pre_trained_model):
     while True:
         action = agent.eval_step(torch.tensor(obs, dtype=torch.float32), None, None)
         a = np.array(action)
+        # a = np.array([0, 1, 0])
         obs, reward, done, info = env.step(a)
         env.render()
         if done:
@@ -171,7 +171,7 @@ def test():
         end_on_harmful_gs=False,
         incent_win=True,
         constrain_controls=False,
-        physics_steps_per_observation=6,
+        physics_steps_per_observation=12,
         contain_prev_actions_in_obs=False,
         dummy_accel_agent_indices=[1],
         # dummy_random_scenario=True,
@@ -180,13 +180,17 @@ def test():
     env.configure_env(env_config)
 
     obs = env.reset()
-    while True:
-        a = np.array([0, 0.2, 0])
+
+    for _ in range(100):
+        a = np.array([-0.3, 1, 0])
         obs, reward, done, info = env.step(a)
         env.render()
-        if done:
-            obs = env.reset()
-
+        # if done:
+        #     obs = env.reset()
+    for _ in range(100):
+        a = np.array([0, 0, 1])
+        obs, reward, done, info = env.step(a)
+        env.render()
 
 if __name__ == "__main__":
     import argparse

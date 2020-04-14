@@ -100,8 +100,8 @@ def build_and_train(run_ID=0, cuda_idx=None):
         EnvCls=make_env,
         env_kwargs=dict(id=env_id), #env_config,
         eval_env_kwargs=dict(id=env_id),  #env_config,
-        batch_T=4,  # One time-step per sampler iteration.
-        batch_B=8,  # One environment (i.e. sampler Batch dimension).
+        batch_T=4,
+        batch_B=8,
         max_decorrelation_steps=100,
         eval_n_envs=2,
         eval_max_steps=int(10e3),
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=0)
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
-    parser.add_argument('--mode', help='train or eval', default='eval')
+    parser.add_argument('--mode', help='train or eval', default='train')
 
     args = parser.parse_args()
 

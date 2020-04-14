@@ -28,30 +28,35 @@ import time
 ##########################################################3
 config = dict(
     agent=dict(),
-    model=dict(dueling=False),
+    model=dict(
+        mlp_hidden_sizes=[64],
+        fc_size=64,  # Between mlp and lstm.
+        lstm_size=64,
+        head_size=64,
+        dueling=False),
     algo=dict(
         discount=0.997,
-        batch_T=128,
-        batch_B=64,  # In the paper, 64.
-        warmup_T=40,
-        store_rnn_state_interval=40,
-        replay_ratio=1,  # In the paper, more like 0.8.
-        replay_size=int(1e6),
-        learning_rate=8e-5,
-        clip_grad_norm=1e6,  # 80 (Steven.) #TODO:test sth like 1e6. same as mujoco ppo
-        min_steps_learn=int(1e5),
-        eps_steps=int(1e6),
-        target_update_interval=200, #2500
+        batch_T=4,
+        batch_B=8,  # In the paper, 64.
+        warmup_T=4,
+        store_rnn_state_interval=4,
+        replay_ratio=8,  # In the paper, more like 0.8.
+        replay_size=int(1e3),
+        learning_rate=1e-3,
+        clip_grad_norm=100,  # 80 (Steven.) #TODO:test sth like 1e6. same as mujoco ppo
+        min_steps_learn=int(256),
+        eps_steps=int(1e4),
+        target_update_interval=100, #2500
         double_dqn=True,
         frame_state_space=False,
-        prioritized_replay=True,
-        input_priorities=False, ## True
+        prioritized_replay=False,
+        input_priorities=False, ## True - set it false for non-prioritized replay
         n_step_return=5, #5 #in the prioritization formula, r2d1 uses n-step return td-error -> I think we have to use n_step if we want to use prioritized replay
-        pri_alpha=0.6,  # Fixed on 20190813
-        pri_beta_init=0.9,  # I think had these backwards before.
-        pri_beta_final=0.9,
+        pri_alpha=0.9,  # Fixed on 20190813
+        pri_beta_init=0.6,  # I think had these backwards before.
+        pri_beta_final=0.6,
         replay_buffer_class=None, #UniformSequenceReplayBuffer,
-        input_priority_shift=1,  # Added 20190826 (used to default to 1)
+        input_priority_shift=2,  # Added 20190826 (used to default to 1)
     ),
     optim=dict(),
     env = dict(
@@ -62,12 +67,12 @@ config = dict(
         log_interval_steps=1e4,
     ),
     sampler=dict(
-        batch_T=128,  # Match the algo / replay_ratio.
-        batch_B=128,
+        batch_T=4,  # Match the algo / replay_ratio.
+        batch_B=8,
         max_decorrelation_steps=100,
         eval_n_envs=2,
-        eval_max_steps=int(51e3),
-        eval_max_trajectories=100,
+        eval_max_steps=int(10e3),
+        eval_max_trajectories=4,
     ),
 )
 
