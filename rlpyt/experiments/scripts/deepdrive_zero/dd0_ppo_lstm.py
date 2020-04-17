@@ -131,7 +131,7 @@ def build_and_train(run_ID=0, cuda_idx=0, pre_trained_model=None):
     log_dir = algo_name + "dd0"
 
     with logger_context(log_dir, run_ID, name, cfg, snapshot_mode='last'):
-        runner.traisn()
+        runner.train()
 
 
 def evaluate(pre_trained_model):

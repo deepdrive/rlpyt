@@ -1,5 +1,5 @@
-import sys 
-sys.path.append('/home/isaac/codes/dd-zero/deepdrive-zero') 
+import sys
+sys.path.append('/home/isaac/codes/dd-zero/deepdrive-zero')
 sys.path.append('/home/isaac/codes/dd-zero/rlpyt')
 
 
@@ -10,8 +10,8 @@ from rlpyt.samplers.parallel.gpu.collectors import GpuWaitResetCollector
 from rlpyt.samplers.parallel.cpu.collectors import CpuWaitResetCollector
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.samplers.async_.cpu_sampler import AsyncCpuSampler
-from rlpyt.algos.dqn.r2d1 import R2D1
-from rlpyt.agents.dqn.deepdrive.deepdrive_r2d1_agent import DeepDriveR2d1Agent
+from rlpyt.algos.qpg.r2dpg import R2DPG
+from rlpyt.agents.qpg.deepdrive_r2dpg_agent import DeepDriveR2dpgAgent
 from rlpyt.runners.minibatch_rl import MinibatchRlEval
 from rlpyt.runners.async_rl import AsyncRlEval
 from rlpyt.utils.logging.context import logger_context
@@ -33,12 +33,17 @@ config = dict(
         fc_size=256,  # Between mlp and lstm.
         lstm_size=256,
         head_size=256,
-        dueling=False,
+    ),
+    q_model_kwargs=dict(
+        mlp_hidden_sizes=[256, 256],
+        fc_size=256,  # Between mlp and lstm.
+        lstm_size=256,
+        head_size=256,
     ),
     algo=dict(
         discount=0.997,
-        batch_T=80,
-        batch_B=64,  # In the paper, 64.
+        batch_T=128,
+        batch_B=8,  # In the paper, 64.
         warmup_T=40,
         store_rnn_state_interval=40,
         replay_ratio=1,  # In the paper, more like 0.8.
@@ -85,8 +90,8 @@ config = dict(
         log_interval_steps=1e4,
     ),
     sampler=dict(
-        batch_T=80,  # Match the algo / replay_ratio.
-        batch_B=128,
+        batch_T=128,  # Match the algo / replay_ratio.
+        batch_B=8,
         max_decorrelation_steps=100,
         eval_n_envs=2,
         eval_max_steps=int(51e3),
@@ -131,15 +136,16 @@ def build_and_train(pre_trained_model=None, run_ID=0):
         **config["sampler"]
     )
 
-    algo = R2D1(
+    algo = R2DPG(
         initial_optim_state_dict=optimizer_state_dict,
         optim_kwargs=config["optim"],
         **config["algo"]
     )
 
-    agent = DeepDriveR2d1Agent(
+    agent = DeepDriveR2dpgAgent(
         initial_model_state_dict=agent_state_dict,
         model_kwargs=config["model_kwargs"],
+        q_model_kwargs=config["q_model_kwargs"],
         **config["agent"]
     )
 
