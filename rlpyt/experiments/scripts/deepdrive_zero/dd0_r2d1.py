@@ -28,7 +28,7 @@ import time
 ##########################################################3
 config = dict(
     agent=dict(),
-    model=dict(
+    model_kwargs=dict(
         mlp_hidden_sizes=[256, 256],
         fc_size=256,  # Between mlp and lstm.
         lstm_size=256,
@@ -139,6 +139,7 @@ def build_and_train(pre_trained_model=None, run_ID=0):
 
     agent = DeepDriveR2d1Agent(
         initial_model_state_dict=agent_state_dict,
+        model_kwargs=config["model_kwargs"],
         **config["agent"]
     )
 
