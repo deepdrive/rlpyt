@@ -11,7 +11,7 @@ class DeepDriveDiscretizeActionWrapper(gym.ActionWrapper, Env):
     """
     def __init__(self, env):
         super(DeepDriveDiscretizeActionWrapper, self).__init__(env)
-        discrete_steer = list(np.arange(-0.2, 0.21, 0.1)) #list(np.arange(-1, 1.01, 0.08))
+        discrete_steer = list(np.arange(-0.3, 0.31, 0.1)) #list(np.arange(-1, 1.01, 0.08))
         discrete_acc   = [-1, 0, 0.5, 1] # list(np.arange(0, 1.01, 0.25))
         # discrete_brake =[0, 1] # list(np.arange(-1, 1.01, 0.5))
         self.discrete_act = [discrete_steer, discrete_acc]  # acc, steer
