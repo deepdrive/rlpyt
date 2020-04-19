@@ -10,7 +10,7 @@ from rlpyt.replays.sequence.frame import (UniformSequenceReplayFrameBuffer,
                                           PrioritizedSequenceReplayFrameBuffer, AsyncUniformSequenceReplayFrameBuffer,
                                           AsyncPrioritizedSequenceReplayFrameBuffer)
 from rlpyt.replays.sequence.prioritized import AsyncPrioritizedSequenceReplayBuffer, PrioritizedSequenceReplayBuffer
-from rlpyt.replays.sequence.uniform import AsyncUniformSequenceReplayBuffer, UniformSequenceReplayBuffer
+from rlpyt.replays.sequence.uniform import AsyncUniformSequenceReplayBuffer, UniformSequenceReplayBuffer, UniformSequenceReplayBufferR2dpg
 
 from rlpyt.utils.tensor import select_at_indexes, valid_mean
 from rlpyt.algos.utils import valid_from_done, discount_return_n_step
@@ -18,7 +18,7 @@ from rlpyt.utils.buffer import buffer_to, buffer_method, torchify_buffer
 
 OptInfo = namedtuple("OptInfo", ["q_loss", "gradNorm", "tdAbsErr", "priority", "muLoss", "muGradNorm"])
 SamplesToBufferRnn = namedarraytuple("SamplesToBufferRnn",
-                                     SamplesToBuffer._fields + ("prev_rnn_state",))
+                                     SamplesToBuffer._fields + ("q_prev_rnn_state", "mu_prev_rnn_state",))
 PrioritiesSamplesToBuffer = namedarraytuple("PrioritiesSamplesToBuffer",
                                             ["priorities", "samples"])
 
@@ -103,7 +103,8 @@ class R2DPG(DDPG):
         )
         if self.store_rnn_state_interval > 0:
             example_to_buffer = SamplesToBufferRnn(*example_to_buffer,
-                                                   prev_rnn_state=examples["agent_info"].prev_rnn_state,
+                                                   q_prev_rnn_state=examples["agent_info"].q_prev_rnn_state,
+                                                   mu_prev_rnn_state=examples["agent_info"].mu_prev_rnn_state
                                                    )
         replay_kwargs = dict(
             example=example_to_buffer,
@@ -140,8 +141,10 @@ class R2DPG(DDPG):
                                  else UniformSequenceReplayBuffer)
         else:
             ReplayCls = self.replay_buffer_class
+        # self.replay_buffer = ReplayCls(**replay_kwargs)
 
-        self.replay_buffer = ReplayCls(**replay_kwargs)
+        # just support uniform replay for r2dpg
+        self.replay_buffer = UniformSequenceReplayBufferR2dpg(**replay_kwargs)
         return self.replay_buffer
 
     def optimize_agent(self, itr, samples=None, sampler_itr=None):
@@ -198,7 +201,8 @@ class R2DPG(DDPG):
         samples_to_buffer = super().samples_to_buffer(samples)
         if self.store_rnn_state_interval > 0:
             samples_to_buffer = SamplesToBufferRnn(*samples_to_buffer,
-                                                   prev_rnn_state=samples.agent.agent_info.prev_rnn_state)
+                                                   q_prev_rnn_state=samples.agent.agent_info.q_prev_rnn_state,
+                                                   mu_prev_rnn_state=samples.agent.agent_info.mu_prev_rnn_state)
         if self.input_priorities:
             priorities = self.compute_input_priorities(samples)
             samples_to_buffer = PrioritiesSamplesToBuffer(
@@ -305,30 +309,39 @@ class R2DPG(DDPG):
         return_ = samples.return_[wT:wT + bT]
         done_n = samples.done_n[wT:wT + bT]
         if self.store_rnn_state_interval == 0:
-            init_rnn_state = None
+            q_init_rnn_state = None
+            mu_init_rnn_state = None
         else:
             # [B,N,H]-->[N,B,H] cudnn.
-            init_rnn_state = buffer_method(samples.init_rnn_state, "transpose", 0, 1)
-            init_rnn_state = buffer_method(init_rnn_state, "contiguous")
+            q_init_rnn_state = buffer_method(samples.q_init_rnn_state, "transpose", 0, 1)
+            q_init_rnn_state = buffer_method(q_init_rnn_state, "contiguous")
+            q_init_rnn_state = buffer_method(q_init_rnn_state, "squeeze", -2)
+
+            mu_init_rnn_state = buffer_method(samples.mu_init_rnn_state, "transpose", 0, 1)
+            mu_init_rnn_state = buffer_method(mu_init_rnn_state, "contiguous")
+            mu_init_rnn_state = buffer_method(mu_init_rnn_state, "squeeze", -2)
         if wT > 0:  # Do warmup.
             with torch.no_grad():
-                _, target_rnn_state = self.agent.target_q_at_mu(*warmup_inputs, init_rnn_state)
-                _, init_rnn_state = self.agent(*warmup_inputs, init_rnn_state)
+                _, q_target_rnn_state, mu_target_rnn_state = self.agent.target_q_at_mu(*warmup_inputs, q_init_rnn_state, mu_init_rnn_state)
+                _, q_init_rnn_state, mu_init_rnn_state = self.agent(*warmup_inputs, q_init_rnn_state, mu_init_rnn_state)
             # Recommend aligning sampling batch_T and store_rnn_interval with
             # warmup_T (and no mid_batch_reset), so that end of trajectory
             # during warmup leads to new trajectory beginning at start of
             # training segment of replay.
             warmup_invalid_mask = valid_from_done(samples.done[:wT])[-1] == 0  # [B]
-            init_rnn_state[:, warmup_invalid_mask] = 0  # [N,B,H] (cudnn)
-            target_rnn_state[:, warmup_invalid_mask] = 0
+            q_init_rnn_state[:, warmup_invalid_mask] = 0  # [N,B,H] (cudnn)
+            mu_init_rnn_state[:, warmup_invalid_mask] = 0
+            q_target_rnn_state[:, warmup_invalid_mask] = 0
+            mu_target_rnn_state[:, warmup_invalid_mask] = 0
         else:
-            target_rnn_state = init_rnn_state
+            q_target_rnn_state = q_init_rnn_state
+            mu_target_rnn_state = mu_init_rnn_state
 
         ## q loss
-        q, _ = self.agent.q(*agent_inputs, action, init_rnn_state)  # [T,B,A]
+        q, _ = self.agent.q(*agent_inputs, action, q_init_rnn_state)  # [T,B,A]
         q = q.squeeze(dim=-1)
         with torch.no_grad():
-            target_qs, _ = self.agent.target_q_at_mu(*target_inputs, target_rnn_state)
+            target_qs, _, _ = self.agent.target_q_at_mu(*target_inputs, q_target_rnn_state, mu_target_rnn_state)
             target_q = target_qs.squeeze(dim=-1)
             target_q = target_q[-bT:]  # Same length as q.
 
@@ -387,27 +400,34 @@ class R2DPG(DDPG):
         return_ = samples.return_[wT:wT + bT]
         done_n = samples.done_n[wT:wT + bT]
         if self.store_rnn_state_interval == 0:
-            init_rnn_state = None
+            q_init_rnn_state = None
+            mu_init_rnn_state = None
         else:
             # [B,N,H]-->[N,B,H] cudnn.
-            init_rnn_state = buffer_method(samples.init_rnn_state, "transpose", 0, 1)
-            init_rnn_state = buffer_method(init_rnn_state, "contiguous")
+            q_init_rnn_state = buffer_method(samples.q_init_rnn_state, "transpose", 0, 1)
+            q_init_rnn_state = buffer_method(q_init_rnn_state, "contiguous")
+            mu_init_rnn_state = buffer_method(samples.mu_init_rnn_state, "transpose", 0, 1)
+            mu_init_rnn_state = buffer_method(mu_init_rnn_state, "contiguous")
         if wT > 0:  # Do warmup.
             with torch.no_grad():
-                _, target_rnn_state = self.agent.target_q_at_mu(*warmup_inputs, init_rnn_state)
-                _, init_rnn_state = self.agent(*warmup_inputs, init_rnn_state)
+                _, q_target_rnn_state, mu_target_rnn_state = self.agent.target_q_at_mu(*warmup_inputs, q_init_rnn_state,
+                                                                                       mu_init_rnn_state)
+                _, q_init_rnn_state, mu_init_rnn_state = self.agent(*warmup_inputs, q_init_rnn_state, mu_init_rnn_state)
             # Recommend aligning sampling batch_T and store_rnn_interval with
             # warmup_T (and no mid_batch_reset), so that end of trajectory
             # during warmup leads to new trajectory beginning at start of
             # training segment of replay.
             warmup_invalid_mask = valid_from_done(samples.done[:wT])[-1] == 0  # [B]
-            init_rnn_state[:, warmup_invalid_mask] = 0  # [N,B,H] (cudnn)
-            target_rnn_state[:, warmup_invalid_mask] = 0
+            q_init_rnn_state[:, warmup_invalid_mask] = 0  # [N,B,H] (cudnn)
+            mu_init_rnn_state[:, warmup_invalid_mask] = 0
+            q_target_rnn_state[:, warmup_invalid_mask] = 0
+            mu_target_rnn_state[:, warmup_invalid_mask] = 0
         else:
-            target_rnn_state = init_rnn_state
+            q_target_rnn_state = q_init_rnn_state
+            mu_target_rnn_state = mu_init_rnn_state
 
         valid = valid_from_done(samples.done[wT:])
-        mu_losses, _ = self.agent.q_at_mu(*agent_inputs, init_rnn_state)
+        mu_losses, _, _ = self.agent.q_at_mu(*agent_inputs, q_init_rnn_state, mu_init_rnn_state)
         mu_losses = mu_losses.squeeze(dim=-1)
         mu_loss = valid_mean(mu_losses, valid)  # valid can be None.
         return -mu_loss

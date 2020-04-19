@@ -9,7 +9,7 @@ from rlpyt.utils.collections import namedarraytuple
 
 SamplesFromReplay = namedarraytuple("SamplesFromReplay",
     ["all_observation", "all_action", "all_reward", "return_", "done", "done_n",
-    "init_rnn_state"])
+    "q_init_rnn_state"])
 
 SamplesToBuffer = None
 
