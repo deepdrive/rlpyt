@@ -4,6 +4,7 @@ sys.path.append('/home/isaac/codes/dd-zero/rlpyt')
 
 
 from deepdrive_zero.envs.env import Deepdrive2DEnv
+from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.sampler import GpuSampler
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.samplers.parallel.gpu.collectors import GpuWaitResetCollector
@@ -29,33 +30,35 @@ import time
 config = dict(
     agent=dict(),
     model_kwargs=dict(
-        mlp_hidden_sizes=[256, 256],
+        mlp_hidden_sizes=[256],
         fc_size=256,  # Between mlp and lstm.
         lstm_size=256,
         head_size=256,
     ),
     q_model_kwargs=dict(
-        mlp_hidden_sizes=[256, 256],
+        mlp_hidden_sizes=[256],
         fc_size=256,  # Between mlp and lstm.
         lstm_size=256,
         head_size=256,
     ),
     algo=dict(
         discount=0.997,
-        batch_T=128,
-        batch_B=8,  # In the paper, 64.
-        warmup_T=40,
-        store_rnn_state_interval=40,
-        replay_ratio=1,  # In the paper, more like 0.8.
+        batch_T=80,
+        batch_B=64,  # In the paper, 64.
+        warmup_T=20,
+        store_rnn_state_interval=20,
+        replay_ratio=64,  # In the paper, more like 0.8.
         replay_size=int(1e6),
         learning_rate=1e-4,
-        clip_grad_norm=1e6,  # 80 (Steven.) #TODO:test sth like 1e6. same as mujoco ppo
-        min_steps_learn=int(1e5),
-        eps_steps=int(1e6),
-        target_update_interval=100, #2500
-        double_dqn=True,
+        q_learning_rate=1e-4,
+        clip_grad_norm=1e8,  # 80 (Steven.) #TODO:test sth like 1e6. same as mujoco ppo
+        q_target_clip=1e6,
+        min_steps_learn=int(1e4),
+        target_update_tau=0.01,
+        target_update_interval=1, #2500
+        policy_update_interval=1,
         frame_state_space=False,
-        prioritized_replay=True,
+        prioritized_replay=False,
         input_priorities=False, ## True
         n_step_return=5, #5 #in the prioritization formula, r2d1 uses n-step return td-error -> I think we have to use n_step if we want to use prioritized replay
         pri_alpha=0.6,  # Fixed on 20190813
@@ -91,7 +94,7 @@ config = dict(
     ),
     sampler=dict(
         batch_T=128,  # Match the algo / replay_ratio.
-        batch_B=8,
+        batch_B=32,
         max_decorrelation_steps=100,
         eval_n_envs=2,
         eval_max_steps=int(51e3),
@@ -103,7 +106,6 @@ config = dict(
 def make_env(*args, **kwargs):
     env = Deepdrive2DEnv()
     env.configure_env(kwargs)
-    env = DeepDriveDiscretizeActionWrapper(env)
     env = GymEnvWrapper(env)
     return env
 
@@ -120,14 +122,12 @@ def build_and_train(pre_trained_model=None, run_ID=0):
         agent_state_dict = None
         optimizer_state_dict = None
 
-    affinity = dict(cuda_idx=0, workers_cpus=range(27))
+    affinity = dict(cuda_idx=0, workers_cpus=range(6))
     cfg = dict(env_id=config['env']['id'], **config)
-    algo_name = 'r2d1_'
+    algo_name = 'r2dpg_'
     name = algo_name + config['env']['id']
     log_dir = algo_name + "dd0"
 
-    # TODO: doesn't work with CpuSampler. Check why? checkCollectorCls
-    # TODO: test wirh AlternatingSampler ->2x faster?
     sampler = CpuSampler(
         EnvCls=make_env,
         env_kwargs=config['env'],
@@ -149,7 +149,6 @@ def build_and_train(pre_trained_model=None, run_ID=0):
         **config["agent"]
     )
 
-    #TODO: test AsyncRlEval. need AsyncSampler
     runner = MinibatchRlEval(
         algo=algo,
         agent=agent,
@@ -158,11 +157,8 @@ def build_and_train(pre_trained_model=None, run_ID=0):
         **config["runner"]
     )
 
-    start = time.time()
     with logger_context(log_dir, run_ID, name, cfg, snapshot_mode='last'):
         runner.train()
-    print('duration: ', time.time() - start)
-
 
 def evaluate(pre_trained_model):
     data = torch.load(pre_trained_model)
@@ -175,7 +171,12 @@ def evaluate(pre_trained_model):
     env.configure_env(env_config)
     env = DeepDriveDiscretizeActionWrapper(env)
 
-    agent = DeepDriveR2d1Agent(initial_model_state_dict=agent_state_dict['model'])
+    agent = DeepDriveR2dpgAgent(
+        initial_model_state_dict=agent_state_dict['model'],
+        model_kwargs=config["model_kwargs"],
+        q_model_kwargs=config["q_model_kwargs"],
+        **config["agent"]
+    )
     env_spaces = EnvSpaces(
             observation=env.observation_space,
             action=env.action_space,

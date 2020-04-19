@@ -42,16 +42,18 @@ class DeepdriveR2dpgQofMuMlpModel(torch.nn.Module):
                             output_size=fc_size,
                             nonlinearity=torch.nn.ReLU  # Match spinningup
                             )
-        self.lstm = torch.nn.LSTM(fc_size + 1 + 1, lstm_size)
+        self.lstm = torch.nn.LSTM(fc_size + output_size + 1, lstm_size)
 
         self.head = MlpModel(input_size=lstm_size,
                                  hidden_sizes=head_size,
                                  output_size=1,
-                                 nonlinearity=torch.nn.ReLU) #TODO: test with Tanh
+                                 nonlinearity=torch.nn.ReLU)
 
-    def forward(self, observation, action, prev_action, prev_reward, init_rnn_state):
+    def forward(self, observation, prev_action, prev_reward, mu, init_rnn_state):
         """Feedforward layers process as [T*B,H]. Return same leading dims as
         input, can be [T,B], [B], or []."""
+        observation = observation.type(torch.float)  # Expect torch.uint8 inputs
+        lead_dim, T, B, _ = infer_leading_dims(observation, self._obs_n_dim)
         if self.normalize_observation:
             obs_var = self.obs_rms.var
             if self.norm_obs_var_clip is not None:
@@ -59,15 +61,9 @@ class DeepdriveR2dpgQofMuMlpModel(torch.nn.Module):
             observation = torch.clamp((observation - self.obs_rms.mean) /
                 obs_var.sqrt(), -self.norm_obs_clip, self.norm_obs_clip)
 
-        input_ = torch.cat([
-            observation,
-            action,
-            ], dim=2).type(torch.float)  # Expect torch.uint8 inputs
+        observation = torch.cat([observation.view(T*B, -1), mu.view(T*B, -1)], dim=1).type(torch.float)
 
-        # Infer (presence of) leading dimensions: [T,B], [B], or [].
-        lead_dim, T, B, _ = infer_leading_dims(input_, self._obs_n_dim)
-
-        mlp_out = self.mlp(input_.view(T * B, -1))
+        mlp_out = self.mlp(observation.view(T * B, -1))
 
         lstm_input = torch.cat([
             mlp_out.view(T, B, -1),
@@ -137,10 +133,10 @@ class DeepdriveR2dpgMuMlpModel(torch.nn.Module):
     def forward(self, observation, prev_action, prev_reward, init_rnn_state):
         """Feedforward layers process as [T*B,H]. Return same leading dims as
         input, can be [T,B], [B], or []."""
-        obz = observation.type(torch.float)  # Expect torch.uint8 inputs
+        observation = observation.type(torch.float)  # Expect torch.uint8 inputs
 
         # Infer (presence of) leading dimensions: [T,B], [B], or [].
-        lead_dim, T, B, _ = infer_leading_dims(obz, self._obs_n_dim)
+        lead_dim, T, B, _ = infer_leading_dims(observation, self._obs_n_dim)
 
         if self.normalize_observation:
             obs_var = self.obs_rms.var

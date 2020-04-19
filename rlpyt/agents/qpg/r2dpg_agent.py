@@ -28,10 +28,11 @@ class R2dpgAgentBase(DdpgAgent):
     def __call__(self, observation, prev_action, prev_reward, init_rnn_state):
         # Assume init_rnn_state already shaped: [N,B,H]
 
-        model_inputs = buffer_to((observation, prev_action, prev_reward,
-            init_rnn_state), device=self.device)
-        mu = self.model(*model_inputs)
-        q, rnn_state = self.q_model(*model_inputs, mu)
+        model_inputs = buffer_to((observation, prev_action, prev_reward,)
+                                 , device=self.device)
+        init_rnn_state = buffer_to(init_rnn_state, device=self.device)
+        mu, _ = self.model(*model_inputs, init_rnn_state)
+        q, rnn_state = self.q_model(*model_inputs, mu, init_rnn_state)
         return q.cpu(), rnn_state  # Leave rnn state on device.
 
     @torch.no_grad()
@@ -40,7 +41,8 @@ class R2dpgAgentBase(DdpgAgent):
         epsilon-greedy (no grad).  Advances RNN state."""
         agent_inputs = buffer_to((observation, prev_action, prev_reward),
             device=self.device)
-        mu = self.model(*agent_inputs)
+        mu, _ = self.model(*agent_inputs, self.prev_rnn_state)
+        mu = mu.to(self.device)
         q, rnn_state = self.q_model(*agent_inputs, mu, self.prev_rnn_state)  # Model handles None.
         q = q.cpu()
         action = self.distribution.sample(DistInfo(mean=mu))
@@ -49,17 +51,34 @@ class R2dpgAgentBase(DdpgAgent):
         # (Special case, model should always leave B dimension in.)
         prev_rnn_state = buffer_method(prev_rnn_state, "transpose", 0, 1)
         prev_rnn_state = buffer_to(prev_rnn_state, device="cpu")
-        agent_info = AgentInfo(q=q, prev_rnn_state=prev_rnn_state)
+        agent_info = AgentInfo(q=q, mu=mu.cpu(), prev_rnn_state=prev_rnn_state)
         self.advance_rnn_state(rnn_state)  # Keep on device.
         return AgentStep(action=action, agent_info=agent_info)
+
+    def q(self, observation, prev_action, prev_reward, action, init_rnn_state):
+        """Compute Q-value for input state/observation and action (with grad)."""
+        model_inputs = buffer_to((observation, prev_action, prev_reward,
+            action), device=self.device)
+        q, rnn_state = self.q_model(*model_inputs, init_rnn_state)
+        return q.cpu(), rnn_state
+
+    def q_at_mu(self, observation, prev_action, prev_reward, init_rnn_state):
+        """Compute Q-value for input state/observation, through the mu_model
+        (with grad)."""
+        model_inputs = buffer_to((observation, prev_action, prev_reward),
+            device=self.device)
+        mu, _ = self.model(*model_inputs, init_rnn_state)
+        q, rnn_state = self.q_model(*model_inputs, mu, init_rnn_state)
+        return q.cpu(), rnn_state
 
     def target_q_at_mu(self, observation, prev_action, prev_reward, init_rnn_state):
         """Compute target Q-value for input state/observation, through the
         target mu_model."""
-        model_inputs = buffer_to((observation, prev_action, prev_reward, init_rnn_state),
-            device=self.device)
-        target_mu = self.target_model(*model_inputs)
-        target_q_at_mu, rnn_state = self.target_q_model(*model_inputs, target_mu)
+        model_inputs = buffer_to((observation, prev_action, prev_reward),
+                                 device=self.device)
+        init_rnn_state = buffer_to(init_rnn_state, device=self.device)
+        target_mu, _ = self.target_model(*model_inputs, init_rnn_state)
+        target_q_at_mu, rnn_state = self.target_q_model(*model_inputs, target_mu, init_rnn_state)
         return target_q_at_mu.cpu(), rnn_state
 
 

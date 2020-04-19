@@ -99,6 +99,7 @@ class R2DPG(DDPG):
             action=examples["action"],
             reward=examples["reward"],
             done=examples["done"],
+            timeout=getattr(examples["env_info"], "timeout", None)
         )
         if self.store_rnn_state_interval > 0:
             example_to_buffer = SamplesToBufferRnn(*example_to_buffer,
@@ -166,11 +167,11 @@ class R2DPG(DDPG):
         for _ in range(self.updates_per_optimize):
             samples_from_replay = self.replay_buffer.sample_batch(self.batch_B)
             self.q_optimizer.zero_grad()
-            q_loss, td_abs_errors, priorities = self.loss(samples_from_replay)
+            q_loss, td_abs_errors, priorities = self.q_loss(samples_from_replay)
             q_loss.backward()
             grad_norm = torch.nn.utils.clip_grad_norm_(
                 self.agent.parameters(), self.clip_grad_norm)
-            self.optimizer.step()
+            self.q_optimizer.step()
             if self.prioritized_replay:
                 self.replay_buffer.update_batch_priorities(priorities)
             opt_info.q_loss.append(q_loss.item())
@@ -311,7 +312,7 @@ class R2DPG(DDPG):
             init_rnn_state = buffer_method(init_rnn_state, "contiguous")
         if wT > 0:  # Do warmup.
             with torch.no_grad():
-                _, target_rnn_state = self.agent.target(*warmup_inputs, init_rnn_state)
+                _, target_rnn_state = self.agent.target_q_at_mu(*warmup_inputs, init_rnn_state)
                 _, init_rnn_state = self.agent(*warmup_inputs, init_rnn_state)
             # Recommend aligning sampling batch_T and store_rnn_interval with
             # warmup_T (and no mid_batch_reset), so that end of trajectory
@@ -325,8 +326,10 @@ class R2DPG(DDPG):
 
         ## q loss
         q, _ = self.agent.q(*agent_inputs, action, init_rnn_state)  # [T,B,A]
+        q = q.squeeze(dim=-1)
         with torch.no_grad():
-            target_q, _ = self.agent.target_q_at_mu(*target_inputs, target_rnn_state)
+            target_qs, _ = self.agent.target_q_at_mu(*target_inputs, target_rnn_state)
+            target_q = target_qs.squeeze(dim=-1)
             target_q = target_q[-bT:]  # Same length as q.
 
         disc = self.discount ** self.n_step_return
@@ -391,7 +394,7 @@ class R2DPG(DDPG):
             init_rnn_state = buffer_method(init_rnn_state, "contiguous")
         if wT > 0:  # Do warmup.
             with torch.no_grad():
-                _, target_rnn_state = self.agent.target(*warmup_inputs, init_rnn_state)
+                _, target_rnn_state = self.agent.target_q_at_mu(*warmup_inputs, init_rnn_state)
                 _, init_rnn_state = self.agent(*warmup_inputs, init_rnn_state)
             # Recommend aligning sampling batch_T and store_rnn_interval with
             # warmup_T (and no mid_batch_reset), so that end of trajectory
@@ -404,7 +407,8 @@ class R2DPG(DDPG):
             target_rnn_state = init_rnn_state
 
         valid = valid_from_done(samples.done[wT:])
-        mu_losses = self.agent.q_at_mu(*agent_inputs, )
+        mu_losses, _ = self.agent.q_at_mu(*agent_inputs, init_rnn_state)
+        mu_losses = mu_losses.squeeze(dim=-1)
         mu_loss = valid_mean(mu_losses, valid)  # valid can be None.
         return -mu_loss
 
@@ -418,3 +422,17 @@ class R2DPG(DDPG):
         return torch.sign(z) * (((torch.sqrt(1 + 4 * self.value_scale_eps *
                                              (abs(z) + 1 + self.value_scale_eps)) - 1) /
                                  (2 * self.value_scale_eps)) ** 2 - 1)
+
+    def update_itr_hyperparams(self, itr):
+        # EPS NOW IN AGENT.
+        # if itr <= self.eps_itr:  # Epsilon can be vector-valued.
+        #     prog = min(1, max(0, itr - self.min_itr_learn) /
+        #       (self.eps_itr - self.min_itr_learn))
+        #     new_eps = prog * self.eps_final + (1 - prog) * self.eps_init
+        #     self.agent.set_sample_epsilon_greedy(new_eps)
+        if self.prioritized_replay and itr <= self.pri_beta_itr:
+            prog = min(1, max(0, itr - self.min_itr_learn) /
+                (self.pri_beta_itr - self.min_itr_learn))
+            new_beta = (prog * self.pri_beta_final +
+                (1 - prog) * self.pri_beta_init)
+            self.replay_buffer.set_beta(new_beta)
