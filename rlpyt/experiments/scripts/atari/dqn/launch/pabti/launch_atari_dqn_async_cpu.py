@@ -1,12 +1,18 @@
+import sys
+sys.path.append('/home/isaac/codes/dd-zero/deepdrive-zero')
+sys.path.append('/home/isaac/codes/dd-zero/rlpyt')
+
 
 from rlpyt.utils.launching.affinity import encode_affinity
 from rlpyt.utils.launching.exp_launcher import run_experiments
 from rlpyt.utils.launching.variant import make_variants, VariantLevel
 
-script = "rlpyt/experiments/scripts/atari/dqn/train/atari_dqn_async_cpu.py"
+# script = "rlpyt/experiments/scripts/atari/dqn/train/atari_dqn_async_cpu.py"
+script = "../../train/atari_dqn_async_cpu.py"
+
 affinity_code = encode_affinity(
-    n_cpu_core=24,
-    n_gpu=8,
+    n_cpu_core=6,
+    n_gpu=1,
     async_sample=True,
     sample_gpu_per_run=0,
     gpu_per_run=1,

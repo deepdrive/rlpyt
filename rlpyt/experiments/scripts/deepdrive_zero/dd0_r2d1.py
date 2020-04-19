@@ -26,28 +26,29 @@ import numpy as np
 ##########################################################3
 config = dict(
     agent=dict(
-        eps_final=0.10,
+        eps_final=0.05,
     ),
-    model=dict(
-        mlp_hidden_sizes=[256, 256],
+
+    model_kwargs=dict(
+        mlp_hidden_sizes=[256],
         fc_size=256,  # Between mlp and lstm.
         lstm_size=256,
         head_size=256,
         dueling=False,
     ),
     algo=dict(
-        discount=0.9997,
-        batch_T=128, # -> to calculate batch_size for r2d1 update, batch_size = (batch_T + warmup_T) * batch_B
-        batch_B=128,  # In the paper, 64.
-        warmup_T=40,
-        store_rnn_state_interval=40,
-        replay_ratio=8,  # In the paper, more like 0.8.
-        replay_size=int(1e6),
+        discount=0.997,
+        batch_T=80, # -> to calculate batch_size for r2d1 update, batch_size = (batch_T + warmup_T) * batch_B
+        batch_B=64,  # In the paper, 64.
+        warmup_T=20,
+        store_rnn_state_interval=20,
+        replay_ratio=64,  # In the paper, more like 0.8.  -> bigger better
+        replay_size=int(1e5),
         learning_rate=5e-5,
-        clip_grad_norm=80,  # 80 (Steven.)
-        min_steps_learn=int(1e5),
+        clip_grad_norm=1e6,  # 80 (Steven.)
+        min_steps_learn=int(1e4),
         eps_steps=int(1e6),
-        target_update_interval=200, #2500
+        target_update_interval=100, #2500
         double_dqn=True,
         frame_state_space=False,
         prioritized_replay=False,
@@ -78,11 +79,11 @@ config = dict(
         constrain_controls=False,
         physics_steps_per_observation=6,
         contain_prev_actions_in_obs=False,
-        dummy_accel_agent_indices=[1], #for opponent
-        dummy_random_scenario=False
+        # dummy_accel_agent_indices=[1], #for opponent
+        # dummy_random_scenario=False
     ),
     runner=dict(
-        n_steps=50e6,
+        n_steps=3e6,
         log_interval_steps=1e4,
     ),
     sampler=dict(
@@ -138,7 +139,7 @@ def build_and_train(pre_trained_model=None, run_ID=0):
 
     agent = DeepDriveR2d1Agent(
         initial_model_state_dict=agent_state_dict,
-        model_kwargs=config['model'],
+        model_kwargs=config["model_kwargs"],
         **config["agent"]
     )
 
@@ -157,7 +158,7 @@ def build_and_train(pre_trained_model=None, run_ID=0):
 
 def evaluate(pre_trained_model):
     data = torch.load(pre_trained_model)
-    agent_state_dict = data['agent_state_dict']
+    agent_state_dict = data['agent_state_dict']['model']
 
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
     env_config = config['env']
@@ -167,8 +168,9 @@ def evaluate(pre_trained_model):
     env = DeepDriveDiscretizeActionWrapper(env)
 
     agent = DeepDriveR2d1Agent(
-        initial_model_state_dict=agent_state_dict['model'],
-        model_kwargs=config['model'],
+        initial_model_state_dict=agent_state_dict,
+        model_kwargs=config["model_kwargs"],
+        **config["agent"]
     )
     env_spaces = EnvSpaces(
             observation=env.observation_space,
@@ -198,7 +200,7 @@ if __name__ == "__main__":
     parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-15_22-43.43/r2d1_dd0/run_0/params.pkl'
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-18_23-54.15/r2d1_dd0/run_0/params.pkl'
                         )
 
     args = parser.parse_args()

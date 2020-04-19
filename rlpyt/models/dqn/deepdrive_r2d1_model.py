@@ -17,12 +17,12 @@ class DeepdriveR2d1Model(torch.nn.Module):
             self,
             observation_shape,
             output_size,
-            mlp_hidden_sizes=[64, 64],
-            fc_size=64,  # Between mlp and lstm.
-            lstm_size=64,
-            head_size=64,
-            dueling=True,
-            normalize_observation=False,
+            mlp_hidden_sizes=[256],
+            fc_size=256,  # Between mlp and lstm.
+            lstm_size=256,
+            head_size=256,
+            dueling=False,
+            normalize_observation=True,
             norm_obs_clip = 10,
             norm_obs_var_clip = 1e-6,
             ):
