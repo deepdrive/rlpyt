@@ -93,7 +93,29 @@ class R2dpgAgentBase(DdpgAgent):
         target_q, q_rnn_state = self.target_q_model(*model_inputs, target_mu, q_init_rnn_state)
         return target_q.cpu(), q_rnn_state, mu_rnn_state
 
+    @torch.no_grad()
+    def eval_step(self, observation, prev_action, prev_reward):
+        """Computes Q-values for states/observations and selects actions by
+        epsilon-greedy (no grad).  Advances RNN state."""
+        agent_inputs = buffer_to((observation, prev_action, prev_reward),
+                                 device=self.device)
+        mu, mu_rnn_state = self.model(*agent_inputs, self.mu_prev_rnn_state)
+        mu = mu.to(self.device)
+        q, q_rnn_state = self.q_model(*agent_inputs, mu, self.q_prev_rnn_state)  # Model handles None.
+        q = q.cpu()
+        action = mu #self.distribution.sample(DistInfo(mean=mu))
+        q_prev_rnn_state = self.q_prev_rnn_state or buffer_func(q_rnn_state, torch.zeros_like)
+        mu_prev_rnn_state = self.mu_prev_rnn_state or buffer_func(mu_rnn_state, torch.zeros_like)
+        # Transpose the rnn_state from [N,B,H] --> [B,N,H] for storage.
+        # (Special case, model should always leave B dimension in.)
+        q_prev_rnn_state = buffer_method(q_prev_rnn_state, "transpose", 0, 1)
+        q_prev_rnn_state = buffer_to(q_prev_rnn_state, device="cpu")
+        mu_prev_rnn_state = buffer_method(mu_prev_rnn_state, "transpose", 0, 1)
+        mu_prev_rnn_state = buffer_to(mu_prev_rnn_state, device="cpu")
 
+        agent_info = AgentInfo(q=q, mu=mu.cpu(), q_prev_rnn_state=q_prev_rnn_state, mu_prev_rnn_state=mu_prev_rnn_state)
+        self.advance_rnn_state(q_rnn_state, mu_rnn_state)  # Keep on device.
+        return AgentStep(action=action, agent_info=agent_info)
 
 
 AgentInputsRnn = namedarraytuple("AgentInputsRnn",  # Training only.

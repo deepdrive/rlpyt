@@ -44,19 +44,19 @@ config = dict(
     algo=dict(
         discount=0.997,
         batch_T=80,
-        batch_B=6,  # In the paper, 64.
-        warmup_T=20,
-        store_rnn_state_interval=20,
+        batch_B=64,  # In the paper, 64.
+        warmup_T=20, #or 40
+        store_rnn_state_interval=40, # this shows overlap between sequences that we sample
         replay_ratio=64,  # In the paper, more like 0.8.
         replay_size=int(1e5),
-        learning_rate=1e-4,
+        learning_rate=5e-5,
         q_learning_rate=1e-4,
-        clip_grad_norm=1e8,  # 80 (Steven.) #TODO:test sth like 1e6. same as mujoco ppo
+        clip_grad_norm=80,  # 80 (Steven.)
         q_target_clip=1e6,
         min_steps_learn=int(1e4),
-        target_update_tau=0.01,
-        target_update_interval=1, #2500
-        policy_update_interval=1,
+        target_update_tau=0.1,
+        target_update_interval=100,
+        policy_update_interval=1, #don't change this
         frame_state_space=False,
         prioritized_replay=False,
         input_priorities=False, ## True
@@ -76,7 +76,7 @@ config = dict(
         expect_normalized_action_deltas=False,
         jerk_penalty_coeff=0, #3.3e-6,
         gforce_penalty_coeff=0, #0.006,
-        lane_penalty_coeff=0.02, #0.02,
+        lane_penalty_coeff=0.04, #0.02,
         collision_penalty_coeff=4,
         speed_reward_coeff=0.50,
         gforce_threshold=None,
@@ -86,15 +86,15 @@ config = dict(
         constrain_controls=False,
         physics_steps_per_observation=6,
         contain_prev_actions_in_obs=False,
-        # dummy_accel_agent_indices=[1] #for opponent
+        dummy_accel_agent_indices=[1] #for opponent
     ),
     runner=dict(
-        n_steps=10e6,
+        n_steps=50e6,
         log_interval_steps=1e4,
     ),
     sampler=dict(
-        batch_T=128,  # Match the algo / replay_ratio.
-        batch_B=6,
+        batch_T=30,  # Match the algo / replay_ratio.
+        batch_B=27,
         max_decorrelation_steps=100,
         eval_n_envs=2,
         eval_max_steps=int(51e3),
@@ -122,7 +122,7 @@ def build_and_train(pre_trained_model=None, run_ID=0):
         agent_state_dict = None
         optimizer_state_dict = None
 
-    affinity = dict(cuda_idx=0, workers_cpus=range(6))
+    affinity = dict(cuda_idx=0, workers_cpus=range(27))
     cfg = dict(env_id=config['env']['id'], **config)
     algo_name = 'r2dpg_'
     name = algo_name + config['env']['id']
@@ -165,14 +165,12 @@ def evaluate(pre_trained_model):
     agent_state_dict = data['agent_state_dict']
 
     # for loading pre-trained models see: https://github.com/astooke/rlpyt/issues/69
-    config = configs['r2d1']
-    env_config = config['eval_env']
+    env_config = config['env']
     env = Deepdrive2DEnv()
     env.configure_env(env_config)
-    env = DeepDriveDiscretizeActionWrapper(env)
 
     agent = DeepDriveR2dpgAgent(
-        initial_model_state_dict=agent_state_dict['model'],
+        # initial_model_state_dict=agent_state_dict,
         model_kwargs=config["model_kwargs"],
         q_model_kwargs=config["q_model_kwargs"],
         **config["agent"]
@@ -182,14 +180,16 @@ def evaluate(pre_trained_model):
             action=env.action_space,
     )
     agent.initialize(env_spaces)
+    agent.load_state_dict(agent_state_dict)
+    # agent.sample_mode(0)
 
     obs = env.reset()
-    prev_action = torch.tensor(0.0, dtype=torch.float) #None
+    prev_action = torch.tensor([0.0, 0.0, 0.0], dtype=torch.float) #None
     prev_reward = torch.tensor(0.0, dtype=torch.float) #None
     while True:
         #TODO: do we need warm-up for evaluation too?
         action = agent.eval_step(torch.tensor(obs, dtype=torch.float32), prev_action, prev_reward)
-        action = np.array(action.action)
+        action = np.array(action.action) #np.array(action.agent_info.mu)
         obs, reward, done, info = env.step(action)
         prev_action = torch.tensor(action, dtype=torch.float)
         prev_reward = torch.tensor(reward, dtype=torch.float)
@@ -205,13 +205,13 @@ if __name__ == "__main__":
     parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-13_22-27.59/r2d1_dd0/run_0/params.pkl'
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-20_13-05.30/r2dpg_dd0/run_0/params.pkl'
                         )
 
     args = parser.parse_args()
 
     if args.mode == 'train':
-        #build_and_train(pre_trained_model=args.pre_trained_model)
+        # build_and_train(pre_trained_model=args.pre_trained_model)
         build_and_train()
     else:
         evaluate(args.pre_trained_model)

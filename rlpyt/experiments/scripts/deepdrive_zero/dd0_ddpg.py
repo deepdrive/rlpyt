@@ -26,16 +26,25 @@ import numpy as np
 
 
 env_config = dict(
-    id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
-    is_intersection_map=True,
-    expect_normalized_action_deltas=False,
-    jerk_penalty_coeff=0.1,
-    gforce_penalty_coeff=0.01,
-    end_on_harmful_gs=False,
-    incent_win=True,
-    constrain_controls=False,
-    dummy_accel_agent_indices=[1]
-)
+        id='deepdrive-2d-intersection-w-gs-allow-decel-v0',
+        is_intersection_map=True,
+        is_one_waypoint_map=False,
+        expect_normalized_actions=True,
+        expect_normalized_action_deltas=False,
+        jerk_penalty_coeff=0, #3.3e-6,
+        gforce_penalty_coeff=0, #0.006,
+        lane_penalty_coeff=0.02, #0.02,
+        collision_penalty_coeff=4,
+        speed_reward_coeff=0.50,
+        gforce_threshold=None,
+        end_on_harmful_gs=False,
+        incent_win=True,
+        incent_yield_to_oncoming_traffic=True,
+        constrain_controls=False,
+        physics_steps_per_observation=6,
+        contain_prev_actions_in_obs=False,
+        # dummy_accel_agent_indices=[1] #for opponent
+    )
 
 
 def make_env(*args, **kwargs):
@@ -49,10 +58,10 @@ def build_and_train(run_ID=0, cuda_idx=None):
         EnvCls=make_env,
         env_kwargs=env_config,
         eval_env_kwargs=env_config,
-        batch_T=4,  # One time-step per sampler iteration.
-        batch_B=8,  # One environment (i.e. sampler Batch dimension).
+        batch_T=32,  # One time-step per sampler iteration.
+        batch_B=128,  # One environment (i.e. sampler Batch dimension).
         max_decorrelation_steps=0,
-        eval_n_envs=10,
+        eval_n_envs=2,
         eval_max_steps=int(51e3),
         eval_max_trajectories=50,
     )
@@ -63,15 +72,18 @@ def build_and_train(run_ID=0, cuda_idx=None):
         replay_size=100000,
         bootstrap_timelimit=False,
     )
-    agent = DdpgAgent()
+    agent = DdpgAgent(
+        model_kwargs = dict(hidden_sizes=[128, 128]),
+        q_model_kwargs = dict(hidden_sizes=[128, 128])
+    )
 
     runner = MinibatchRlEval(
         algo=algo,
         agent=agent,
         sampler=sampler,
-        n_steps=1e6,
-        log_interval_steps=10,
-        affinity=dict(cuda_idx=cuda_idx, workers_cpus=[0,1,2,3,4,5,6]),
+        n_steps=3e6,
+        log_interval_steps=1e4,
+        affinity=dict(cuda_idx=cuda_idx, workers_cpus=range(27)),
     )
 
     config = dict(env_id=env_config['id'])
