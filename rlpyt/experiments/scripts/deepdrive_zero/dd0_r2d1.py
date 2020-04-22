@@ -20,20 +20,23 @@ from rlpyt.envs.gym import GymEnvWrapper
 from rlpyt.envs.base import EnvSpaces
 from rlpyt.utils.wrappers import DeepDriveDiscretizeActionWrapper
 
+from deepdrive_zero.constants import COMFORTABLE_STEERING_ACTIONS, \
+    COMFORTABLE_ACTIONS
+
 import torch
 import numpy as np
 
 ##########################################################3
 config = dict(
     agent=dict(
-        eps_final=0.05,
+        eps_final=0.02,
     ),
 
     model_kwargs=dict(
-        mlp_hidden_sizes=[256],
-        fc_size=256,  # Between mlp and lstm.
-        lstm_size=256,
-        head_size=256,
+        mlp_hidden_sizes=[128],
+        fc_size=128,  # Between mlp and lstm.
+        lstm_size=128,
+        head_size=128,
         dueling=False,
     ),
     algo=dict(
@@ -41,17 +44,17 @@ config = dict(
         batch_T=80, # -> to calculate batch_size for r2d1 update, batch_size = (batch_T + warmup_T) * batch_B
         batch_B=64,  # In the paper, 64.
         warmup_T=20,
-        store_rnn_state_interval=20,
+        store_rnn_state_interval=40,
         replay_ratio=64,  # In the paper, more like 0.8.  -> bigger better
-        replay_size=int(1e5),
-        learning_rate=5e-5,
-        clip_grad_norm=1e6,  # 80 (Steven.)
-        min_steps_learn=int(1e4),
-        eps_steps=int(1e6),
-        target_update_interval=100, #2500
+        replay_size=int(5e5),
+        learning_rate=1e-4,
+        clip_grad_norm=10,  # 80 (Steven.)
+        min_steps_learn=int(2e5),
+        eps_steps=int(1e5),
+        target_update_interval=200, #2500 TODO:test 200
         double_dqn=True,
         frame_state_space=False,
-        prioritized_replay=False,
+        prioritized_replay=True,
         input_priorities=False, ## True
         n_step_return=5, #5 #in the prioritization formula, r2d1 uses n-step return td-error -> I think we have to use n_step if we want to use prioritized replay
         pri_alpha=0.6,  # Fixed on 20190813
@@ -69,7 +72,7 @@ config = dict(
         expect_normalized_action_deltas=False,
         jerk_penalty_coeff=0, #3.3e-6,
         gforce_penalty_coeff=0, #0.006,
-        lane_penalty_coeff=0.02, #0.02,
+        lane_penalty_coeff=0.04,  #0.02,
         collision_penalty_coeff=4,
         speed_reward_coeff=0.50,
         gforce_threshold=None,
@@ -79,16 +82,17 @@ config = dict(
         constrain_controls=False,
         physics_steps_per_observation=6,
         contain_prev_actions_in_obs=False,
+        discrete_actions=COMFORTABLE_ACTIONS,
         # dummy_accel_agent_indices=[1], #for opponent
         # dummy_random_scenario=False
     ),
     runner=dict(
-        n_steps=3e6,
+        n_steps=15e6,
         log_interval_steps=1e4,
     ),
     sampler=dict(
-        batch_T=128,  # Match the algo / replay_ratio.
-        batch_B=128,
+        batch_T=30,  # Match the algo / replay_ratio.
+        batch_B=256,
         max_decorrelation_steps=100,
         eval_n_envs=2,
         eval_max_steps=int(51e3),
@@ -100,7 +104,7 @@ config = dict(
 def make_env(*args, **kwargs):
     env = Deepdrive2DEnv()
     env.configure_env(kwargs)
-    env = DeepDriveDiscretizeActionWrapper(env)
+    # env = DeepDriveDiscretizeActionWrapper(env)
     env = GymEnvWrapper(env)
     return env
 
@@ -143,7 +147,6 @@ def build_and_train(pre_trained_model=None, run_ID=0):
         **config["agent"]
     )
 
-    #TODO: test AsyncRlEval. need AsyncSampler
     runner = MinibatchRlEval(
         algo=algo,
         agent=agent,
@@ -165,7 +168,7 @@ def evaluate(pre_trained_model):
 
     env = Deepdrive2DEnv()
     env.configure_env(env_config)
-    env = DeepDriveDiscretizeActionWrapper(env)
+    # env = DeepDriveDiscretizeActionWrapper(env)
 
     agent = DeepDriveR2d1Agent(
         initial_model_state_dict=agent_state_dict,
@@ -182,7 +185,6 @@ def evaluate(pre_trained_model):
     prev_action = torch.tensor(0.0, dtype=torch.float) #None
     prev_reward = torch.tensor(0.0, dtype=torch.float) #None
     while True:
-        #TODO: do we need warm-up for evaluation too?
         action = agent.eval_step(torch.tensor(obs, dtype=torch.float32), prev_action, prev_reward)
         action = np.array(action.action)
         obs, reward, done, info = env.step(action)
@@ -193,6 +195,26 @@ def evaluate(pre_trained_model):
             obs = env.reset()
 
 
+
+def test():
+    env_config = config['env']
+    env = Deepdrive2DEnv()
+    env.configure_env(env_config)
+
+    obs = env.reset()
+
+    for _ in range(100):
+        a = np.array([-0.3, 1, 0])
+        obs, reward, done, info = env.step(a)
+        env.render()
+        # if done:
+        #     obs = env.reset()
+    for _ in range(100):
+        a = np.array([0, 0, 1])
+        obs, reward, done, info = env.step(a)
+        env.render()
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -200,7 +222,7 @@ if __name__ == "__main__":
     parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-18_23-54.15/r2d1_dd0/run_0/params.pkl'
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-21_21-20.22/r2d1_dd0/run_0/params.pkl'
                         )
 
     args = parser.parse_args()
@@ -211,3 +233,4 @@ if __name__ == "__main__":
     else:
         evaluate(args.pre_trained_model)
 
+    # test()
