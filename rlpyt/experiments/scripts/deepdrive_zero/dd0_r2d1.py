@@ -20,8 +20,8 @@ from rlpyt.envs.gym import GymEnvWrapper
 from rlpyt.envs.base import EnvSpaces
 from rlpyt.utils.wrappers import DeepDriveDiscretizeActionWrapper
 
-from deepdrive_zero.constants import COMFORTABLE_STEERING_ACTIONS, \
-    COMFORTABLE_ACTIONS
+# from deepdrive_zero.constants import COMFORTABLE_STEERING_ACTIONS, \
+#     COMFORTABLE_ACTIONS
 
 import torch
 import numpy as np
@@ -29,7 +29,7 @@ import numpy as np
 ##########################################################3
 config = dict(
     agent=dict(
-        eps_final=0.02,
+        eps_final=0.01,
     ),
 
     model_kwargs=dict(
@@ -37,31 +37,31 @@ config = dict(
         fc_size=128,  # Between mlp and lstm.
         lstm_size=128,
         head_size=128,
-        dueling=False,
+        dueling=True,
     ),
     algo=dict(
-        discount=0.997,
-        batch_T=80, # -> to calculate batch_size for r2d1 update, batch_size = (batch_T + warmup_T) * batch_B
-        batch_B=64,  # In the paper, 64.
-        warmup_T=20,
-        store_rnn_state_interval=40,
-        replay_ratio=64,  # In the paper, more like 0.8.  -> bigger better
-        replay_size=int(5e5),
-        learning_rate=1e-4,
-        clip_grad_norm=10,  # 80 (Steven.)
-        min_steps_learn=int(2e5),
-        eps_steps=int(1e5),
-        target_update_interval=200, #2500 TODO:test 200
-        double_dqn=True,
+        # discount=0.997,
+        # batch_T=80, # -> to calculate batch_size for r2d1 update, batch_size = (batch_T + warmup_T) * batch_B
+        # batch_B=64,  # In the paper, 64.
+        # warmup_T=20,
+        # store_rnn_state_interval=40,
+        # replay_ratio=64,  # In the paper, more like 0.8.  -> bigger better
+        # replay_size=int(1e6),
+        # learning_rate=1e-4,
+        # clip_grad_norm=10,  # 80 (Steven.)
+        # min_steps_learn=int(1e5),
+        # eps_steps=int(1e6),
+        # target_update_interval=2500, #2500 TODO:test 200
+        # double_dqn=True,
         frame_state_space=False,
-        prioritized_replay=True,
-        input_priorities=False, ## True
-        n_step_return=5, #5 #in the prioritization formula, r2d1 uses n-step return td-error -> I think we have to use n_step if we want to use prioritized replay
-        pri_alpha=0.6,  # Fixed on 20190813
-        pri_beta_init=0.9,  # I think had these backwards before.
-        pri_beta_final=0.9,
+        # prioritized_replay=True,
+        # input_priorities=False, ## True
+        # n_step_return=5, #5 #in the prioritization formula, r2d1 uses n-step return td-error -> I think we have to use n_step if we want to use prioritized replay
+        # pri_alpha=0.6,  # Fixed on 20190813
+        # pri_beta_init=0.9,  # I think had these backwards before.
+        # pri_beta_final=0.9,
         replay_buffer_class=None, #UniformSequenceReplayBuffer,
-        input_priority_shift=1,  # Added 20190826 (used to default to 1)
+        # input_priority_shift=1,  # Added 20190826 (used to default to 1)
     ),
     optim=dict(),
     env = dict(
@@ -70,28 +70,29 @@ config = dict(
         is_one_waypoint_map=False,
         expect_normalized_actions=True,
         expect_normalized_action_deltas=False,
-        jerk_penalty_coeff=0, #3.3e-6,
-        gforce_penalty_coeff=0, #0.006,
+        jerk_penalty_coeff=0, #3.3e-4,
+        gforce_penalty_coeff=0, #0.006*5,
         lane_penalty_coeff=0.04,  #0.02,
         collision_penalty_coeff=4,
         speed_reward_coeff=0.50,
-        gforce_threshold=None,
+        gforce_threshold=None, #1.0,
+        # jerk_threshold=150.0,  # 15g/s
         end_on_harmful_gs=False,
         incent_win=True,
         incent_yield_to_oncoming_traffic=True,
         constrain_controls=False,
         physics_steps_per_observation=6,
         contain_prev_actions_in_obs=False,
-        discrete_actions=COMFORTABLE_ACTIONS,
-        # dummy_accel_agent_indices=[1], #for opponent
-        # dummy_random_scenario=False
+        # discrete_actions=COMFORTABLE_ACTIONS,
+        dummy_accel_agent_indices=[1], #for opponent
+        dummy_random_scenario=False
     ),
     runner=dict(
-        n_steps=15e6,
+        n_steps=30e6,
         log_interval_steps=1e4,
     ),
     sampler=dict(
-        batch_T=30,  # Match the algo / replay_ratio.
+        batch_T=50,  # Match the algo / replay_ratio.
         batch_B=256,
         max_decorrelation_steps=100,
         eval_n_envs=2,
@@ -104,7 +105,7 @@ config = dict(
 def make_env(*args, **kwargs):
     env = Deepdrive2DEnv()
     env.configure_env(kwargs)
-    # env = DeepDriveDiscretizeActionWrapper(env)
+    env = DeepDriveDiscretizeActionWrapper(env)
     env = GymEnvWrapper(env)
     return env
 
@@ -168,7 +169,7 @@ def evaluate(pre_trained_model):
 
     env = Deepdrive2DEnv()
     env.configure_env(env_config)
-    # env = DeepDriveDiscretizeActionWrapper(env)
+    env = DeepDriveDiscretizeActionWrapper(env)
 
     agent = DeepDriveR2d1Agent(
         initial_model_state_dict=agent_state_dict,
@@ -203,16 +204,23 @@ def test():
 
     obs = env.reset()
 
-    for _ in range(100):
-        a = np.array([-0.3, 1, 0])
+    while True:
+        a = np.array([0, 0, 0])
         obs, reward, done, info = env.step(a)
         env.render()
-        # if done:
-        #     obs = env.reset()
-    for _ in range(100):
-        a = np.array([0, 0, 1])
-        obs, reward, done, info = env.step(a)
-        env.render()
+        if done:
+            obs = env.reset()
+
+    # for _ in range(100):
+    #     a = np.array([-0.3, 1, 0])
+    #     obs, reward, done, info = env.step(a)
+    #     env.render()
+    #     # if done:
+    #     #     obs = env.reset()
+    # for _ in range(100):
+    #     a = np.array([0, 0, 1])
+    #     obs, reward, done, info = env.step(a)
+    #     env.render()
 
 
 if __name__ == "__main__":
@@ -222,7 +230,7 @@ if __name__ == "__main__":
     parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-21_21-20.22/r2d1_dd0/run_0/params.pkl'
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-22_22-41.34/r2d1_dd0/run_0/params.pkl'
                         )
 
     args = parser.parse_args()
@@ -230,7 +238,7 @@ if __name__ == "__main__":
     if args.mode == 'train':
         # build_and_train(pre_trained_model=args.pre_trained_model)
         build_and_train()
-    else:
+    elif args.mode == 'eval':
         evaluate(args.pre_trained_model)
-
-    # test()
+    elif args.mode == 'test':
+        test()

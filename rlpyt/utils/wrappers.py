@@ -7,13 +7,14 @@ import random
 
 
 class DeepDriveDiscretizeActionWrapper(gym.ActionWrapper, Env):
-    """ Discretizes the action space of deepdrive_zero env.
+    """
+    Discretizes the action space of deepdrive_zero env.
     """
     def __init__(self, env):
         super(DeepDriveDiscretizeActionWrapper, self).__init__(env)
-        discrete_steer = list(np.arange(-0., 0.21, 0.05)) #list(np.arange(-1, 1.01, 0.08))
-        discrete_acc   = [-1, 0, 0.1, 0.5, 1] # list(np.arange(0, 1.01, 0.25))
-        # discrete_brake =[0, 1] # list(np.arange(-1, 1.01, 0.5))
+        discrete_steer = list(np.arange(-0.20, 0.21, 0.05)) #list(np.arange(-1, 1.01, 0.08))
+        discrete_acc   = [-0.5, 0, 0.5, 1, 1.5, 2] # list(np.arange(0, 1.01, 0.25))
+        # discrete_brake =[-1, -0.5, 0, 0.5, 1] # list(np.arange(-1, 1.01, 0.5))
         self.discrete_act = [discrete_steer, discrete_acc]  # acc, steer
         self.n_steer = len(self.discrete_act[0])
         self.n_acc = len(self.discrete_act[1])
@@ -26,10 +27,10 @@ class DeepDriveDiscretizeActionWrapper(gym.ActionWrapper, Env):
             for a in discrete_acc:
                 # for b in discrete_brake:
                 #     self.action_items.append([s, a, b])
-                if a >= 0:
-                   self.action_items.append([s, a, -0.5])
+                if a <= 1:
+                    self.action_items.append([s, a, 0])
                 else:
-                   self.action_items.append([s, 0, -a])
+                    self.action_items.append([s, 1, -(a-1)])
 
         ##
         # self.prev_steer = 0
