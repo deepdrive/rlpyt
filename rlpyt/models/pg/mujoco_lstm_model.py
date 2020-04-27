@@ -40,6 +40,13 @@ class MujocoLstmModel(torch.nn.Module):
         mlp_output_size = hidden_sizes[-1] if hidden_sizes else mlp_input_size
         self.lstm = torch.nn.LSTM(mlp_output_size + action_size + 1, lstm_size)
         self.head = torch.nn.Linear(lstm_size, action_size * 2 + 1)
+        # self.mu_head = torch.nn.Sequential(
+        #     torch.nn.Linear(lstm_size, action_size),
+        #     torch.nn.Tanh()
+        # )
+        # self.log_std_head = torch.nn.Linear(lstm_size, action_size)
+        # self.value_head = torch.nn.Linear(lstm_size, 1)
+
         if normalize_observation:
             self.obs_rms = RunningMeanStdModel(observation_shape)
             self.norm_obs_clip = norm_obs_clip
@@ -73,14 +80,15 @@ class MujocoLstmModel(torch.nn.Module):
             ], dim=2)
         init_rnn_state = None if init_rnn_state is None else tuple(init_rnn_state)
         lstm_out, (hn, cn) = self.lstm(lstm_input, init_rnn_state)
-        # cat_lstm_mlpout = torch.cat([
-        #     lstm_out.view(T, B, -1),
-        #     mlp_out.view(T, B, -1)
-        #     ], dim=2)
+
         outputs = self.head(lstm_out.view(T * B, -1))
         mu = outputs[:, :self._action_size]
         log_std = outputs[:, self._action_size:-1]
         v = outputs[:, -1]
+
+        # mu = self.mu_head(lstm_out.view(T * B, -1))
+        # log_std = self.log_std_head(lstm_out.view(T * B, -1))
+        # v = self.value_head(lstm_out.view(T * B, -1))[:, -1]
 
         # Restore leading dimensions: [T,B], [B], or [], as input.
         mu, log_std, v = restore_leading_dims((mu, log_std, v), lead_dim, T, B)
