@@ -21,6 +21,7 @@ from rlpyt.utils.buffer import buffer_to, buffer_method, torchify_buffer
 OptInfo = namedtuple("OptInfo", ["loss", "gradNorm", "tdAbsErr", "priority"])
 SamplesToBufferRnn = namedarraytuple("SamplesToBufferRnn",
     SamplesToBuffer._fields + ("prev_rnn_state",))
+
 PrioritiesSamplesToBuffer = namedarraytuple("PrioritiesSamplesToBuffer",
     ["priorities", "samples"])
 
@@ -103,7 +104,7 @@ class R2D1(DQN):
         )
         if self.store_rnn_state_interval > 0:
             example_to_buffer = SamplesToBufferRnn(*example_to_buffer,
-                prev_rnn_state=examples["agent_info"].prev_rnn_state,
+                prev_rnn_state=examples["agent_info"].prev_rnn_state
             )
         replay_kwargs = dict(
             example=example_to_buffer,

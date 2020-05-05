@@ -11,6 +11,7 @@ from rlpyt.samplers.parallel.cpu.collectors import CpuWaitResetCollector
 from rlpyt.samplers.parallel.cpu.collectors import CpuResetCollector
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.samplers.async_.cpu_sampler import AsyncCpuSampler
+from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.algos.dqn.r2d1 import R2D1
 from rlpyt.agents.dqn.deepdrive.deepdrive_r2d1_agent import DeepDriveR2d1Agent
 from rlpyt.runners.minibatch_rl import MinibatchRlEval
@@ -19,6 +20,7 @@ from rlpyt.utils.logging.context import logger_context
 from rlpyt.envs.gym import GymEnvWrapper
 from rlpyt.envs.base import EnvSpaces
 from rlpyt.utils.wrappers import DeepDriveDiscretizeActionWrapper
+from rlpyt.envs.gym import EnvInfoWrapper
 
 from deepdrive_zero.constants import COMFORTABLE_STEERING_ACTIONS, \
     COMFORTABLE_ACTIONS
@@ -42,14 +44,14 @@ config = dict(
     algo=dict(
         # discount=0.997,
         # batch_T=80, # -> to calculate batch_size for r2d1 update, batch_size = (batch_T + warmup_T) * batch_B
-        # batch_B=64,  # In the paper, 64.
+        batch_B=1,  # In the paper, 64.
         # warmup_T=20,
         # store_rnn_state_interval=40,
-        replay_ratio=64,  # In the paper, more like 0.8.  -> bigger better
+        replay_ratio=1, #64  # In the paper, more like 0.8.  -> bigger better
         replay_size=int(5e6),
         learning_rate=1e-4,
         # clip_grad_norm=10,  # 80 (Steven.)
-        # min_steps_learn=int(1e5),
+        min_steps_learn=int(1e2),
         eps_steps=int(1e6),
         target_update_interval=1000, #2500 TODO:test 200
         # double_dqn=True,
@@ -84,9 +86,9 @@ config = dict(
         physics_steps_per_observation=6,
         contain_prev_actions_in_obs=False,
         discrete_actions=COMFORTABLE_ACTIONS,
-        dummy_accel_agent_indices=[1], #for opponent
-        dummy_random_scenario=True,
-        end_on_lane_violation=True
+        # dummy_accel_agent_indices=[1], #for opponent
+        # dummy_random_scenario=True,
+        # end_on_lane_violation=True
     ),
     runner=dict(
         n_steps=20e6,
@@ -94,7 +96,7 @@ config = dict(
     ),
     sampler=dict(
         batch_T=30,  # Match the algo / replay_ratio.
-        batch_B=256,
+        batch_B=1,
         max_decorrelation_steps=100,
         eval_n_envs=2,
         eval_max_steps=int(51e3),
@@ -104,10 +106,22 @@ config = dict(
 
 
 def make_env(*args, **kwargs):
-    env = Deepdrive2DEnv()
+    env = Deepdrive2DEnv(is_intersection_map=True)
     env.configure_env(kwargs)
-    # env = DeepDriveDiscretizeActionWrapper(env)
-    env = GymEnvWrapper(env)
+    # env = GymEnvWrapper(env)
+    info_example = {'stats':
+        {
+            'steer': -0.0174533,
+            'accel': 0,
+            'brake': 0,
+            'speed': 0,
+            'episode_time': 0,
+            'dummy_agent_scenario': None,
+            'agent_index': 0
+        }
+    }
+    env = GymEnvWrapper(EnvInfoWrapper(
+        env, info_example))
     return env
 
 
@@ -129,7 +143,7 @@ def build_and_train(pre_trained_model=None, run_ID=0):
     name = algo_name + config['env']['id']
     log_dir = algo_name + "dd0"
 
-    sampler = CpuSampler(
+    sampler = SerialSampler(
         EnvCls=make_env,
         env_kwargs=config['env'],
         CollectorCls=CpuWaitResetCollector, #is beneficial for lstm based methods -> https://rlpyt.readthedocs.io/en/latest/pages/collector.html#rlpyt.samplers.parallel.cpu.collectors.CpuWaitResetCollector
@@ -202,7 +216,6 @@ def evaluate(pre_trained_model):
             agent.reset()
 
 
-
 def test():
     env_config = config['env']
     env = Deepdrive2DEnv()
@@ -240,7 +253,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--mode', help='train or eval', default='eval')
+    parser.add_argument('--mode', help='train or eval', default='train')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
                         default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_05-02_21-43.33/r2d1_dd0/run_0/params.pkl'
