@@ -37,7 +37,7 @@ config = dict(
         fc_size=128,  # Between mlp and lstm.
         lstm_size=128,
         head_size=128,
-        dueling=False,
+        dueling=True,
     ),
     algo=dict(
         # discount=0.997,
@@ -46,12 +46,12 @@ config = dict(
         # warmup_T=20,
         # store_rnn_state_interval=40,
         replay_ratio=64,  # In the paper, more like 0.8.  -> bigger better
-        # replay_size=int(1e6),
-        learning_rate=5e-5,
+        replay_size=int(5e6),
+        learning_rate=1e-4,
         # clip_grad_norm=10,  # 80 (Steven.)
         # min_steps_learn=int(1e5),
-        eps_steps=int(1e7),
-        target_update_interval=200, #2500 TODO:test 200
+        eps_steps=int(1e6),
+        target_update_interval=1000, #2500 TODO:test 200
         # double_dqn=True,
         frame_state_space=False,
         # prioritized_replay=True,
@@ -70,13 +70,13 @@ config = dict(
         is_one_waypoint_map=False,
         expect_normalized_actions=True,
         expect_normalized_action_deltas=False,
-        jerk_penalty_coeff=0, #2*3.3e-6,
-        gforce_penalty_coeff=0, #2*0.006,
-        lane_penalty_coeff=0.1,  #0.02,
+        jerk_penalty_coeff=3.3e-6 * 1,
+        gforce_penalty_coeff=0.0006 * 0,
+        lane_penalty_coeff=0.04,  # 0.02,
         collision_penalty_coeff=4,
         speed_reward_coeff=0.50,
         gforce_threshold=None, #1.0,
-        jerk_threshold=150.0,  # 15g/s
+        # jerk_threshold=150.0,  # 15g/s
         end_on_harmful_gs=False,
         incent_win=True,
         incent_yield_to_oncoming_traffic=True,
@@ -84,11 +84,12 @@ config = dict(
         physics_steps_per_observation=6,
         contain_prev_actions_in_obs=False,
         discrete_actions=COMFORTABLE_ACTIONS,
-        # dummy_accel_agent_indices=[1], #for opponent
-        # dummy_random_scenario=False
+        dummy_accel_agent_indices=[1], #for opponent
+        dummy_random_scenario=True,
+        end_on_lane_violation=True
     ),
     runner=dict(
-        n_steps=100e6,
+        n_steps=20e6,
         log_interval_steps=1e4,
     ),
     sampler=dict(
@@ -122,7 +123,7 @@ def build_and_train(pre_trained_model=None, run_ID=0):
         agent_state_dict = None
         optimizer_state_dict = None
 
-    affinity = dict(cuda_idx=0, workers_cpus=range(27))
+    affinity = dict(cuda_idx=0, workers_cpus=range(7))
     cfg = dict(env_id=config['env']['id'], **config)
     algo_name = 'r2d1_'
     name = algo_name + config['env']['id']
@@ -182,6 +183,7 @@ def evaluate(pre_trained_model):
             action=env.action_space,
     )
     agent.initialize(env_spaces)
+    # agent.sample_mode(0)
 
     obs = env.reset()
     prev_action = torch.tensor(0.0, dtype=torch.float) #None
@@ -195,6 +197,9 @@ def evaluate(pre_trained_model):
         env.render()
         if done:
             obs = env.reset()
+            prev_action = torch.tensor(0.0, dtype=torch.float)  # None
+            prev_reward = torch.tensor(0.0, dtype=torch.float)  # None
+            agent.reset()
 
 
 
@@ -235,10 +240,10 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--mode', help='train or eval', default='train')
+    parser.add_argument('--mode', help='train or eval', default='eval')
     parser.add_argument('--pre_trained_model',
                         help='path to the pre-trained model.',
-                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_04-26_20-46.09/r2d1_dd0/run_0/params.pkl'
+                        default='/home/isaac/codes/dd-zero/rlpyt/data/local/2020_05-02_21-43.33/r2d1_dd0/run_0/params.pkl'
                         )
 
     args = parser.parse_args()
