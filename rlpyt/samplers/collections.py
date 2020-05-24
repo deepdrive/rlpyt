@@ -40,14 +40,21 @@ class TrajInfo(AttrDict):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)  # (for AttrDict behavior)
         self.Length = 0
+        self.Return0 = 0
+        self.Return1 = 0
         self.Return = 0
         self.NonzeroRewards = 0
         self.DiscountedReturn = 0
         self._cur_discount = 1
 
-    def step(self, observation, action, reward, done, agent_info, env_info):
+    def step(self, observation, action, reward0, reward1, done, agent_info, env_info):
         self.Length += 1
+        self.Return0 += reward0
+        self.Return1 += reward1
+
+        reward = reward0 + reward1
         self.Return += reward
+
         self.NonzeroRewards += reward != 0
         self.DiscountedReturn += self._cur_discount * reward
         self._cur_discount *= self._discount
