@@ -44,10 +44,10 @@ config = dict(
     algo=dict(
         # discount=0.997,
         # batch_T=80, # -> to calculate batch_size for r2d1 update, batch_size = (batch_T + warmup_T) * batch_B
-        batch_B=1,  # In the paper, 64.
+        batch_B=4,  # In the paper, 64.
         # warmup_T=20,
         # store_rnn_state_interval=40,
-        replay_ratio=1, #64  # In the paper, more like 0.8.  -> bigger better
+        replay_ratio=64, #64  # In the paper, more like 0.8.  -> bigger better
         replay_size=int(5e6),
         learning_rate=1e-4,
         # clip_grad_norm=10,  # 80 (Steven.)
@@ -72,9 +72,9 @@ config = dict(
         is_one_waypoint_map=False,
         expect_normalized_actions=True,
         expect_normalized_action_deltas=False,
-        jerk_penalty_coeff=3.3e-6 * 1,
+        jerk_penalty_coeff=3.3e-6 * 0,
         gforce_penalty_coeff=0.0006 * 0,
-        lane_penalty_coeff=0.04,  # 0.02,
+        lane_penalty_coeff=0.02,  # 0.02,
         collision_penalty_coeff=4,
         speed_reward_coeff=0.50,
         gforce_threshold=None, #1.0,
@@ -96,7 +96,7 @@ config = dict(
     ),
     sampler=dict(
         batch_T=30,  # Match the algo / replay_ratio.
-        batch_B=1,
+        batch_B=256,
         max_decorrelation_steps=100,
         eval_n_envs=2,
         eval_max_steps=int(51e3),
@@ -111,7 +111,7 @@ def make_env(*args, **kwargs):
     # env = GymEnvWrapper(env)
     info_example = {'stats':
         {
-            'steer': -0.0174533,
+            'steer': 0,
             'accel': 0,
             'brake': 0,
             'speed': 0,
@@ -143,7 +143,7 @@ def build_and_train(pre_trained_model=None, run_ID=0):
     name = algo_name + config['env']['id']
     log_dir = algo_name + "dd0"
 
-    sampler = SerialSampler(
+    sampler = CpuSampler(
         EnvCls=make_env,
         env_kwargs=config['env'],
         CollectorCls=CpuWaitResetCollector, #is beneficial for lstm based methods -> https://rlpyt.readthedocs.io/en/latest/pages/collector.html#rlpyt.samplers.parallel.cpu.collectors.CpuWaitResetCollector
@@ -171,7 +171,7 @@ def build_and_train(pre_trained_model=None, run_ID=0):
         **config["runner"]
     )
 
-    with logger_context(log_dir, run_ID, name, cfg, snapshot_mode='last'):
+    with logger_context(log_dir, run_ID, name, cfg, snapshot_mode='last', use_summary_writer=True):
         runner.train()
 
 

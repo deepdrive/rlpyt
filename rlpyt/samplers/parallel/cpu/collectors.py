@@ -126,7 +126,11 @@ class CpuWaitResetCollector(DecorrelatingStartCollector):
                     continue
                 # Environment inputs and outputs are numpy arrays.
                 o, r, d, env_info = env.step(action[b])
-                traj_infos[b].step(observation[b], action[b], r, d, agent_info[b],
+                if env.agent_index == 0:
+                    rr = [0, r]
+                else:
+                    rr = [r, 0]
+                traj_infos[b].step(observation[b], action[b], rr, d, agent_info[b],
                     env_info)
                 if getattr(env_info, "traj_done", d):
                     completed_infos.append(traj_infos[b].terminate(o))
@@ -188,12 +192,10 @@ class CpuEvalCollector(BaseEvalCollector):
             for b, env in enumerate(self.envs):
                 o, r, d, env_info = env.step(action[b])
                 if env.agent_index == 0:
-                    r1 = r
-                    r0 = 0
+                    rr = [0, r]
                 else:
-                    r1 = 0
-                    r0 = r
-                traj_infos[b].step(observation[b], action[b], r0, r1, d,
+                    rr = [r, 0]
+                traj_infos[b].step(observation[b], action[b], rr, d,
                     agent_info[b], env_info)
                 if getattr(env_info, "traj_done", d):
                     self.traj_infos_queue.put(traj_infos[b].terminate(o))

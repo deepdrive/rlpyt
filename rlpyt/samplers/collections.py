@@ -47,12 +47,18 @@ class TrajInfo(AttrDict):
         self.DiscountedReturn = 0
         self._cur_discount = 1
 
-    def step(self, observation, action, reward0, reward1, done, agent_info, env_info):
+    def step(self, observation, action, reward_list, done, agent_info, env_info):
         self.Length += 1
+        if type(reward_list) is list:
+            reward0, reward1 = reward_list
+        else:
+            reward0 = reward_list
+            reward1 = 0
+
         self.Return0 += reward0
         self.Return1 += reward1
-
         reward = reward0 + reward1
+
         self.Return += reward
 
         self.NonzeroRewards += reward != 0
