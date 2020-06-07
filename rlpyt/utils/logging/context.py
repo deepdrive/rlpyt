@@ -3,11 +3,13 @@ import json
 import os
 import os.path as osp
 from contextlib import contextmanager
-try:
-    # from torch.utils.tensorboard.writer import SummaryWriter
-    from torch.utils.tensorboard import SummaryWriter
-except ImportError:
-    print("Unable to import tensorboard SummaryWriter, proceeding without.")
+from torch.utils.tensorboard import SummaryWriter
+# try:
+#     # from torch.utils.tensorboard.writer import SummaryWriter
+#     # from torch.utils.tensorboard import SummaryWriter
+#     from torch.utils.tensorboard import SummaryWriter
+# except ImportError:
+#     print("Unable to import tensorboard SummaryWriter, proceeding without.")
 
 from rlpyt.utils.logging import logger
 

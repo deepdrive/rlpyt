@@ -101,11 +101,7 @@ class DecorrelatingStartCollector(BaseCollector):
                 for _ in range(n_steps):
                     a = env.action_space.sample()
                     o, r, d, info = env.step(a)
-                    if env.agent_index == 0:
-                        rr = [0, r]
-                    else:
-                        rr = [r, 0]
-                    traj_infos[b].step(o, a, rr, d, None, info)
+                    traj_infos[b].step(o, a, r, d, None, info)
                     if getattr(info, "traj_done", d):
                         o = env.reset()
                         traj_infos[b] = self.TrajInfoCls()
